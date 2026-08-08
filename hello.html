@@ -1,6 +1,50 @@
-<html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mute by Entity</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
   <body>
-    <h1>Hello Extensions</h1>
-    <p>Hi!</p>
+    <main class="popup-shell">
+      <header class="brand-row">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </div>
+        <div>
+          <p class="eyebrow">Mute by Entity</p>
+          <h1>Choose a content box</h1>
+        </div>
+      </header>
+
+      <p class="intro">
+        Point at a listing, post, or result. We’ll outline the box before
+        anything happens.
+      </p>
+
+      <button id="start-selection" class="primary-action" type="button">
+        <span class="action-icon" aria-hidden="true"></span>
+        <span>
+          <strong>Start selecting</strong>
+          <small>Nothing will be hidden yet</small>
+        </span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </button>
+
+      <div class="shortcut-card" aria-label="Selection controls">
+        <div><kbd>↑</kbd><kbd>↓</kbd><span>Adjust box</span></div>
+        <div><kbd>Esc</kbd><span>Cancel</span></div>
+      </div>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <footer>
+        <span class="privacy-dot" aria-hidden="true"></span>
+        Runs only after you press Start on this tab
+      </footer>
+    </main>
+    <script src="popup.js"></script>
   </body>
 </html>

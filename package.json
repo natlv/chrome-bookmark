@@ -1,0 +1,8 @@
+{
+  "name": "mute-by-entity-extension",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "check": "node --check content.js && node --check popup.js"
+  }
+}
