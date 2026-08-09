@@ -160,13 +160,13 @@
           <i class="corner bottom-left"></i><i class="corner bottom-right"></i>
           <div class="box-label"></div>
         </div>
-        <div class="help" role="status">
+        <div class="help selector-type" role="status">
           <span class="live-dot"></span>
           <strong>Choose a content box</strong>
           <span>Move over a listing or post</span>
-          <span class="keys"><kbd>↑</kbd><kbd>↓</kbd> adjust <kbd>Esc</kbd> exit</span>
+          <span class="keys"><kbd>↑</kbd><kbd>↓</kbd><span class="key-label">adjust</span><kbd>Esc</kbd><span class="key-label">exit</span></span>
         </div>
-        <aside class="identity-panel" aria-live="polite">
+        <aside class="identity-panel selector-type selector-panel" aria-live="polite">
           <div class="identity-header">
             <span>Linked identity</span>
             <button class="exit-button" type="button" aria-label="Exit selection mode">Exit</button>
@@ -179,7 +179,7 @@
             </div>
           </div>
         </aside>
-        <section class="confirmation" role="dialog" aria-label="Confirm selected content box">
+        <section class="confirmation selector-type selector-panel" role="dialog" aria-label="Confirm selected content box">
           <p class="confirmation-kicker">Container selected</p>
           <h2>Use this box?</h2>
           <p class="confirmation-copy">This only confirms the UI boundary. Nothing will be muted or saved yet.</p>
@@ -188,7 +188,7 @@
             <button class="primary" type="button">Select box</button>
           </div>
         </section>
-        <div class="toast" role="status" aria-live="polite"></div>
+        <div class="toast selector-type" role="status" aria-live="polite"></div>
       `
       document.documentElement.append(this.host)
 
@@ -230,8 +230,33 @@
 
     styles() {
       return `
-        :host { all: initial; }
-        * { box-sizing: border-box; }
+        :host {
+          all: initial;
+          --selector-font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          --selector-text-xs: 10px;
+          --selector-text-sm: 11px;
+          --selector-text-md: 12px;
+          --selector-text-lg: 13px;
+          --selector-panel-border: 1px solid rgb(255 255 255 / 70%);
+          --selector-panel-background: rgb(255 253 248 / 96%);
+          --selector-panel-shadow: 0 14px 42px rgb(25 37 42 / 22%);
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        .selector-type {
+          font-family: var(--selector-font);
+          font-size: var(--selector-text-md);
+          font-style: normal;
+          line-height: 1.35;
+          text-size-adjust: 100%;
+          -webkit-text-size-adjust: 100%;
+        }
+        .selector-panel {
+          border: var(--selector-panel-border);
+          color: #1e292e;
+          background: var(--selector-panel-background);
+          box-shadow: var(--selector-panel-shadow);
+        }
+        button, kbd { font-family: inherit; }
         .selection-box {
           position: fixed; z-index: 2147483645; display: none; pointer-events: none;
           border: 2px solid #f06a4b; border-radius: 10px;
@@ -250,20 +275,18 @@
           overflow: hidden; padding: 6px 9px; border-radius: 8px; color: #fffdf8;
           text-overflow: ellipsis; white-space: nowrap; background: #202c32;
           box-shadow: 0 5px 18px rgb(32 44 50 / 24%);
-          font: 700 11px/1.2 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-family: var(--selector-font); font-size: var(--selector-text-sm); font-weight: 700; line-height: 1.2;
           letter-spacing: .01em;
-        }
-        .help, .identity-panel, .confirmation, .toast {
-          color: #1e292e; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
         .help {
           position: fixed; z-index: 2147483647; left: 50%; bottom: 22px;
           display: flex; align-items: center; gap: 9px; max-width: calc(100vw - 32px);
+          overflow: hidden;
           padding: 10px 13px; border: 1px solid rgb(255 255 255 / 65%); border-radius: 13px;
           opacity: 0; color: #edf1ef; background: rgb(32 44 50 / 96%);
           box-shadow: 0 14px 38px rgb(20 31 36 / 28%); pointer-events: none;
           transform: translate(-50%, 12px); transition: opacity 160ms ease, transform 160ms ease;
-          font: 12px/1.3 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          line-height: 1.3;
           backdrop-filter: blur(12px);
         }
         .help.is-visible { opacity: 1; transform: translate(-50%, 0); }
@@ -271,32 +294,31 @@
         .help > span:not(.live-dot):not(.keys) { color: #b9c1c0; white-space: nowrap; }
         .live-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #f06a4b; box-shadow: 0 0 0 4px rgb(240 106 75 / 17%); }
         .keys { display: flex; align-items: center; gap: 4px; margin-left: 4px; color: #b9c1c0; white-space: nowrap; }
-        kbd { min-width: 21px; padding: 2px 5px; border: 1px solid #667176; border-bottom-width: 2px; border-radius: 5px; color: #f8faf7; text-align: center; font: 700 10px/1.2 inherit; background: #35434a; }
+        kbd { min-width: 21px; padding: 2px 5px; border: 1px solid #667176; border-bottom-width: 2px; border-radius: 5px; color: #f8faf7; text-align: center; font-size: var(--selector-text-xs); font-weight: 700; line-height: 1.2; background: #35434a; }
         .identity-panel {
           position: fixed; z-index: 2147483647; top: 16px; right: 16px; width: min(310px, calc(100vw - 32px));
-          overflow: hidden; border: 1px solid rgb(255 255 255 / 70%); border-radius: 15px;
-          color: #1e292e; background: rgb(255 253 248 / 96%);
-          box-shadow: 0 14px 42px rgb(25 37 42 / 22%); pointer-events: auto;
+          overflow: hidden; border-radius: 15px; pointer-events: auto;
           backdrop-filter: blur(14px);
         }
         .identity-header {
           display: flex; align-items: center; justify-content: space-between; gap: 12px;
           padding: 9px 10px 8px 13px; border-bottom: 1px solid #e9e3d9;
-          color: #7a8384; font: 750 10px/1.2 inherit; letter-spacing: .09em; text-transform: uppercase;
+          color: #7a8384; font-size: var(--selector-text-xs); font-weight: 750; line-height: 1.2; letter-spacing: .09em; text-transform: uppercase;
         }
         .exit-button {
           padding: 6px 9px; border: 1px solid #d9d3c8; border-radius: 8px; color: #445054;
-          background: #fffdf9; cursor: pointer; font: 750 10px/1 inherit; letter-spacing: 0; text-transform: none;
+          background: #fffdf9; cursor: pointer; font-size: var(--selector-text-xs); font-weight: 750; line-height: 1; letter-spacing: 0; text-transform: none;
         }
         .exit-button:hover { color: #a4412d; border-color: #e2ad9f; background: #fff8f4; }
-        .identity-state { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 10px; padding: 12px 13px 13px; }
+        .identity-state { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 10px; padding: 12px 13px 13px; }
+        .identity-state > div { min-width: 0; }
         .identity-icon {
           display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px;
-          color: #667174; background: #ece9e2; font: 800 14px/1 inherit;
+          color: #667174; background: #ece9e2; font-size: 14px; font-weight: 800; line-height: 1;
         }
-        .identity-state strong, .identity-state small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .identity-state strong { color: #273238; font: 750 13px/1.35 inherit; }
-        .identity-state small { margin-top: 2px; color: #727c7e; font: 11px/1.35 inherit; }
+        .identity-state strong, .identity-state small { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .identity-state strong { color: #273238; font-size: var(--selector-text-lg); font-weight: 750; line-height: 1.35; }
+        .identity-state small { margin-top: 2px; color: #727c7e; font-size: var(--selector-text-sm); line-height: 1.35; }
         .identity-state[data-status="found"] .identity-icon { color: #176143; background: #dcefe5; }
         .identity-state[data-status="ambiguous"] .identity-icon { color: #a84c34; background: #f8e5de; }
         .identity-state[data-status="ambiguous"] strong {
@@ -305,16 +327,15 @@
         .identity-state[data-status="none"] .identity-icon { color: #687275; background: #e9e8e3; }
         .confirmation {
           position: fixed; z-index: 2147483647; display: none; width: min(330px, calc(100vw - 28px));
-          padding: 17px; border: 1px solid #ded9cf; border-radius: 16px; background: #fffdf8;
-          box-shadow: 0 18px 52px rgb(24 33 38 / 26%); pointer-events: auto;
+          padding: 17px; border-color: #ded9cf; border-radius: 16px; pointer-events: auto;
         }
         .confirmation.is-visible { display: block; animation: arrive 150ms ease-out; }
         @keyframes arrive { from { opacity: 0; transform: translateY(5px) scale(.985); } }
-        .confirmation-kicker { margin: 0 0 4px; color: #c65338; font: 750 10px/1.2 inherit; letter-spacing: .1em; text-transform: uppercase; }
-        .confirmation h2 { margin: 0; color: #1e292e; font: 750 18px/1.25 inherit; letter-spacing: -.02em; }
-        .confirmation-copy { margin: 7px 0 15px; color: #647073; font: 12px/1.5 inherit; }
+        .confirmation-kicker { margin: 0 0 4px; color: #c65338; font-size: var(--selector-text-xs); font-weight: 750; line-height: 1.2; letter-spacing: .1em; text-transform: uppercase; }
+        .confirmation h2 { margin: 0; color: #1e292e; font-size: 18px; font-weight: 750; line-height: 1.25; letter-spacing: -.02em; }
+        .confirmation-copy { margin: 7px 0 15px; overflow-wrap: anywhere; color: #647073; font-size: var(--selector-text-md); line-height: 1.5; }
         .confirmation-actions { display: flex; justify-content: flex-end; gap: 8px; }
-        button { padding: 8px 11px; border-radius: 9px; cursor: pointer; font: 700 11px/1 inherit; }
+        button { padding: 8px 11px; border-radius: 9px; cursor: pointer; font-size: var(--selector-text-sm); font-weight: 700; line-height: 1; }
         button:focus-visible { outline: 3px solid rgb(240 106 75 / 25%); outline-offset: 2px; }
         button.secondary { border: 1px solid #d8d3ca; color: #596467; background: #fffdf9; }
         button.primary { border: 1px solid #202c32; color: #fffdf9; background: #202c32; }
@@ -323,7 +344,7 @@
           position: fixed; z-index: 2147483647; left: 50%; bottom: 24px; display: none;
           padding: 11px 15px; border-radius: 12px; color: #f7fff9; background: #287456;
           box-shadow: 0 13px 35px rgb(23 78 57 / 24%); transform: translateX(-50%);
-          font: 700 12px/1.3 inherit;
+          max-width: calc(100vw - 32px); overflow-wrap: anywhere; font-weight: 700; line-height: 1.3;
         }
         .toast.is-visible { display: block; animation: toast-in 170ms ease-out; }
         @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
@@ -331,6 +352,9 @@
           .help > span:not(.live-dot):not(.keys) { display: none; }
           .keys { margin-left: 0; }
           .identity-panel { top: 10px; right: 10px; width: min(290px, calc(100vw - 20px)); }
+        }
+        @media (max-width: 400px) {
+          .key-label { display: none; }
         }
       `
     }

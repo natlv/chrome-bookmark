@@ -31,7 +31,7 @@ The extension currently provides the interaction foundation only:
 Identity detection is heuristic and read-only. The extension does **not** select
 an identity action, save rules, or hide content yet.
 
-TLDR current state: the detection works for Linkedin and Carousell and Youtube and Reddit (around 90%, edge cases to be ironed out later without sacrificing the main working functionality). Doesn't work at all for Ebay (expected because seller names are not displayed until you click on a specific listing). Etsy listing cards expose a stable numeric `data-shop-id`, which is now captured directly without depending on the displayed shop name.
+TLDR current state: the detection works for Linkedin and Carousell and Youtube and Reddit (around 90%, edge cases to be ironed out later without sacrificing the main working functionality). Etsy listing cards expose a stable numeric `data-shop-id`, which is now captured directly without depending on the displayed shop name. Doesn't work at all yet for Ebay or Pinterest (expected because creator names are not displayed until you click on a specific listing). Instagram is deferred because its native controls cover basic account muting.
 
 ## Try it in Chrome
 
