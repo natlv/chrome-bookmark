@@ -18,6 +18,7 @@ The extension currently provides the interaction foundation only:
 - Container selection remains available when identity detection is uncertain or unavailable
 - LinkedIn actor/profile-link and YouTube channel-link recognition
 - Carousell `/u/<username>` seller-link recognition
+- Etsy listing-card `data-shop-id` extraction, preserving the stable numeric shop ID
 - YouTube watch-player lookup when the visible owner link sits beside the player
 - YouTube video-unit lookup across thumbnail/channel sibling branches, including rich grids
 - One bounded retry for YouTube components that hydrate shortly after hover
@@ -30,7 +31,7 @@ The extension currently provides the interaction foundation only:
 Identity detection is heuristic and read-only. The extension does **not** select
 an identity action, save rules, or hide content yet.
 
-TLDR current state: the detection works for Linkedin and Carousell and Youtube and Reddit (around 90%, edge cases to be ironed out later without sacrificing the main working functionality). Doesn't work at all for Ebay (expected because seller names are not displayed until you click on a specific listing). Doesn't work for Etsy (surprising because it looks similar to Carousell, may need to look into the page structure or tweak this extension's rules).
+TLDR current state: the detection works for Linkedin and Carousell and Youtube and Reddit (around 90%, edge cases to be ironed out later without sacrificing the main working functionality). Doesn't work at all for Ebay (expected because seller names are not displayed until you click on a specific listing). Etsy listing cards expose a stable numeric `data-shop-id`, which is now captured directly without depending on the displayed shop name.
 
 ## Try it in Chrome
 
@@ -57,7 +58,8 @@ selector demo** button. The fixture includes semantic `<article>` listings,
 plain repeated `<div>` result rows, a LinkedIn-shaped post with a nested
 comment and social attribution, plus YouTube-shaped video cards with and
 without a detectable channel. It also includes a Carousell username link and a
-multi-column YouTube rich-grid structure.
+multi-column YouTube rich-grid structure, an overlapping multi-identity box,
+and an Etsy card with separate listing and shop IDs.
 
 ## Structure
 

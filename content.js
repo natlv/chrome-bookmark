@@ -17,6 +17,8 @@
     'ytd-reel-item-renderer',
     'yt-lockup-view-model',
   ].join(',')
+  const ETSY_LISTING_UNIT_SELECTOR =
+    '[data-shop-id], [data-listing-id], [class*="etsy-listing-card" i], [class*="v2-listing-card" i]'
   const SEMANTIC_SELECTOR = [
     'article',
     '[role="article"]',
@@ -24,6 +26,7 @@
     'li',
     'tr',
     '[data-card]',
+    '[data-listing-id]',
     '[data-testid*="card" i]',
     '[data-testid*="listing" i]',
     '[class~="card"]',
@@ -51,6 +54,7 @@
     'li',
     'tr',
     '[data-card]',
+    '[data-listing-id]',
     '[data-testid*="card" i]',
     '[data-testid*="listing" i]',
     '[class~="card"]',
@@ -295,6 +299,9 @@
         .identity-state small { margin-top: 2px; color: #727c7e; font: 11px/1.35 inherit; }
         .identity-state[data-status="found"] .identity-icon { color: #176143; background: #dcefe5; }
         .identity-state[data-status="ambiguous"] .identity-icon { color: #a84c34; background: #f8e5de; }
+        .identity-state[data-status="ambiguous"] strong {
+          display: -webkit-box; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+        }
         .identity-state[data-status="none"] .identity-icon { color: #687275; background: #e9e8e3; }
         .confirmation {
           position: fixed; z-index: 2147483647; display: none; width: min(330px, calc(100vw - 28px));
@@ -614,6 +621,23 @@
 
     findSiteIdentity(target) {
       const route = this.getIdentityRoute(location.href)
+      const etsyUnit =
+        this.findEtsyListingUnit(this.hoveredElement) || this.findEtsyListingUnit(target)
+      if (
+        etsyUnit &&
+        (this.isEtsyPage() || etsyUnit.matches('[class*="etsy-listing-card" i], [class*="v2-listing-card" i]'))
+      ) {
+        const shopIdResult = this.findEtsyShopId(etsyUnit)
+        if (shopIdResult.status === 'found') {
+          return { ...shopIdResult, scope: 'etsy-shop-id', container: etsyUnit }
+        }
+
+        const linkedResult = this.findIdentityInContainer(etsyUnit)
+        if (linkedResult.status !== 'none') {
+          return { ...linkedResult, scope: 'current', container: etsyUnit }
+        }
+      }
+
       const isYouTube = this.isYouTubePage()
 
       if (isYouTube) {
@@ -671,6 +695,36 @@
       }
 
       return null
+    }
+
+    isEtsyPage() {
+      const host = location.hostname.replace(/^www\./i, '').toLowerCase()
+      return host === 'etsy.com' || host.endsWith('.etsy.com')
+    }
+
+    findEtsyListingUnit(target) {
+      if (!(target instanceof Element)) return null
+      return (
+        target.closest('[data-shop-id]') ||
+        target.closest('[data-listing-id], [class*="etsy-listing-card" i], [class*="v2-listing-card" i]')
+      )
+    }
+
+    findEtsyShopId(container) {
+      const node = container.closest('[data-shop-id]') || container.querySelector('[data-shop-id]')
+      const shopId = (node?.getAttribute('data-shop-id') || '').trim()
+      if (!/^\d+$/.test(shopId)) return { status: 'none' }
+
+      return {
+        status: 'found',
+        key: `etsy:shop:${shopId}`,
+        label: shopId,
+        type: 'seller',
+        href: null,
+        entityId: shopId,
+        shopId,
+        score: 30,
+      }
     }
 
     isYouTubePage() {
@@ -874,6 +928,7 @@
         const typeLabel = result.type[0].toUpperCase() + result.type.slice(1)
         const sources = {
           surrounding: 'found in surrounding box',
+          'etsy-shop-id': 'shop ID on this listing',
           'video-unit': 'linked in this video box',
           'page-context': 'linked beside this content',
           'page-header': 'identified from this profile page',
@@ -886,9 +941,16 @@
       }
 
       if (state === 'ambiguous') {
+        const labels = (result.candidates || [])
+          .map((candidate) => candidate.label)
+          .filter(Boolean)
         this.identityStateElement.querySelector('.identity-icon').textContent = '!'
-        this.identityTitleElement.textContent = result.count ? `${result.count} possible people or items` : 'Multiple possible people'
-        this.identityDetailElement.textContent = result.reason
+        this.identityTitleElement.textContent = labels.length
+          ? labels.join(' · ')
+          : 'Multiple possible people'
+        this.identityDetailElement.textContent = result.count
+          ? `${result.count} detected in this box`
+          : result.reason
         return
       }
 
