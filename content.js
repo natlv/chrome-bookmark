@@ -5,7 +5,18 @@
   const UI_TAG = 'mute-by-entity-selector-ui'
   const MIN_WIDTH = 150
   const MIN_HEIGHT = 64
-  const MAX_ANCESTORS = 12
+  const MAX_ANCESTORS = 18
+  const MIN_IDENTITY_SCORE = 7
+  const MAX_IDENTITY_SCOPE_GROWTH = 8
+  const YOUTUBE_VIDEO_UNIT_SELECTOR = [
+    'ytd-video-renderer',
+    'ytd-rich-item-renderer',
+    'ytd-compact-video-renderer',
+    'ytd-grid-video-renderer',
+    'ytd-playlist-video-renderer',
+    'ytd-reel-item-renderer',
+    'yt-lockup-view-model',
+  ].join(',')
   const SEMANTIC_SELECTOR = [
     'article',
     '[role="article"]',
@@ -23,7 +34,49 @@
     '[class*="result" i]',
     '[class*="tile" i]',
     '[class*="post" i]',
+    'ytd-video-renderer',
+    'ytd-rich-item-renderer',
+    'ytd-compact-video-renderer',
+    'ytd-grid-video-renderer',
+    'ytd-playlist-video-renderer',
+    'ytd-reel-item-renderer',
+    'yt-lockup-view-model',
+    'ytd-comment-thread-renderer',
+    'ytd-comment-view-model',
   ].join(',')
+  const CONTENT_UNIT_SELECTOR = [
+    'article',
+    '[role="article"]',
+    '[role="listitem"]',
+    'li',
+    'tr',
+    '[data-card]',
+    '[data-testid*="card" i]',
+    '[data-testid*="listing" i]',
+    '[class~="card"]',
+    '[class*="-card" i]',
+    '[class*="result-row" i]',
+    '[class*="listing-item" i]',
+    '[class*="feed-shared-update" i]',
+    '[class*="comments-comment-item" i]',
+    'ytd-video-renderer',
+    'ytd-rich-item-renderer',
+    'ytd-compact-video-renderer',
+    'ytd-grid-video-renderer',
+    'ytd-playlist-video-renderer',
+    'ytd-reel-item-renderer',
+    'yt-lockup-view-model',
+    'ytd-comment-thread-renderer',
+    'ytd-comment-view-model',
+  ].join(',')
+  const IDENTITY_WORDS =
+    /actor|author|attribution|byline|seller|vendor|merchant|shop|store|user|username|profile|creator|channel|poster|commenter|comment-author|member|owner|publisher|metadata/i
+  const PRIMARY_IDENTITY_WORDS =
+    /update-components-actor|feed-shared-actor|comments-post-meta|comment-actor|video-owner|channel-name|channel-info|content-metadata/i
+  const SECONDARY_ATTRIBUTION_WORDS =
+    /update-components-header|social-activity|social-proof|relevance-context|feed-shared-header/i
+  const NON_IDENTITY_WORDS =
+    /product|listing-title|post-title|article-title|comment-link|category|topic|tag|search|share|reply|like|login|sign-?up/i
 
   class ContainerSelector {
     constructor() {
@@ -34,6 +87,9 @@
       this.target = null
       this.frameRequest = 0
       this.pendingPoint = null
+      this.identityResult = null
+      this.identityRetryTimer = 0
+      this.hoveredElement = null
 
       this.onPointerMove = this.onPointerMove.bind(this)
       this.onClick = this.onClick.bind(this)
@@ -65,6 +121,8 @@
       this.active = false
       this.locked = false
       this.target = null
+      this.identityResult = null
+      this.hoveredElement = null
       this.candidates = []
       this.candidateIndex = -1
       document.removeEventListener('pointermove', this.onPointerMove, true)
@@ -73,6 +131,7 @@
       window.removeEventListener('scroll', this.onViewportChange, true)
       window.removeEventListener('resize', this.onViewportChange, true)
       cancelAnimationFrame(this.frameRequest)
+      clearTimeout(this.identityRetryTimer)
 
       if (message) {
         this.showToast(message)
@@ -101,8 +160,21 @@
           <span class="live-dot"></span>
           <strong>Choose a content box</strong>
           <span>Move over a listing or post</span>
-          <span class="keys"><kbd>↑</kbd><kbd>↓</kbd> adjust <kbd>Esc</kbd> cancel</span>
+          <span class="keys"><kbd>↑</kbd><kbd>↓</kbd> adjust <kbd>Esc</kbd> exit</span>
         </div>
+        <aside class="identity-panel" aria-live="polite">
+          <div class="identity-header">
+            <span>Linked identity</span>
+            <button class="exit-button" type="button" aria-label="Exit selection mode">Exit</button>
+          </div>
+          <div class="identity-state" data-status="waiting">
+            <span class="identity-icon" aria-hidden="true">?</span>
+            <div>
+              <strong class="identity-title">Move over a content box</strong>
+              <small class="identity-detail">We’ll look for a linked seller or author.</small>
+            </div>
+          </div>
+        </aside>
         <section class="confirmation" role="dialog" aria-label="Confirm selected content box">
           <p class="confirmation-kicker">Container selected</p>
           <h2>Use this box?</h2>
@@ -121,13 +193,24 @@
       this.helpElement = this.shadow.querySelector('.help')
       this.confirmationElement = this.shadow.querySelector('.confirmation')
       this.toastElement = this.shadow.querySelector('.toast')
+      this.identityStateElement = this.shadow.querySelector('.identity-state')
+      this.identityTitleElement = this.shadow.querySelector('.identity-title')
+      this.identityDetailElement = this.shadow.querySelector('.identity-detail')
+
+      this.shadow.querySelector('.exit-button').addEventListener('click', () => {
+        this.stop()
+      })
 
       this.shadow.querySelector('.secondary').addEventListener('click', () => {
         this.locked = false
         this.hideConfirmation()
       })
       this.shadow.querySelector('.primary').addEventListener('click', () => {
-        const selected = this.describeTarget(this.target)
+        const { container: _container, ...identity } = this.identityResult || {}
+        const selected = {
+          ...this.describeTarget(this.target),
+          identity,
+        }
         globalThis.dispatchEvent(
           new CustomEvent('mute-by-entity:container-selected', { detail: selected })
         )
@@ -166,7 +249,7 @@
           font: 700 11px/1.2 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           letter-spacing: .01em;
         }
-        .help, .confirmation, .toast {
+        .help, .identity-panel, .confirmation, .toast {
           color: #1e292e; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
         .help {
@@ -185,6 +268,34 @@
         .live-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #f06a4b; box-shadow: 0 0 0 4px rgb(240 106 75 / 17%); }
         .keys { display: flex; align-items: center; gap: 4px; margin-left: 4px; color: #b9c1c0; white-space: nowrap; }
         kbd { min-width: 21px; padding: 2px 5px; border: 1px solid #667176; border-bottom-width: 2px; border-radius: 5px; color: #f8faf7; text-align: center; font: 700 10px/1.2 inherit; background: #35434a; }
+        .identity-panel {
+          position: fixed; z-index: 2147483647; top: 16px; right: 16px; width: min(310px, calc(100vw - 32px));
+          overflow: hidden; border: 1px solid rgb(255 255 255 / 70%); border-radius: 15px;
+          color: #1e292e; background: rgb(255 253 248 / 96%);
+          box-shadow: 0 14px 42px rgb(25 37 42 / 22%); pointer-events: auto;
+          backdrop-filter: blur(14px);
+        }
+        .identity-header {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          padding: 9px 10px 8px 13px; border-bottom: 1px solid #e9e3d9;
+          color: #7a8384; font: 750 10px/1.2 inherit; letter-spacing: .09em; text-transform: uppercase;
+        }
+        .exit-button {
+          padding: 6px 9px; border: 1px solid #d9d3c8; border-radius: 8px; color: #445054;
+          background: #fffdf9; cursor: pointer; font: 750 10px/1 inherit; letter-spacing: 0; text-transform: none;
+        }
+        .exit-button:hover { color: #a4412d; border-color: #e2ad9f; background: #fff8f4; }
+        .identity-state { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 10px; padding: 12px 13px 13px; }
+        .identity-icon {
+          display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px;
+          color: #667174; background: #ece9e2; font: 800 14px/1 inherit;
+        }
+        .identity-state strong, .identity-state small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .identity-state strong { color: #273238; font: 750 13px/1.35 inherit; }
+        .identity-state small { margin-top: 2px; color: #727c7e; font: 11px/1.35 inherit; }
+        .identity-state[data-status="found"] .identity-icon { color: #176143; background: #dcefe5; }
+        .identity-state[data-status="ambiguous"] .identity-icon { color: #a84c34; background: #f8e5de; }
+        .identity-state[data-status="none"] .identity-icon { color: #687275; background: #e9e8e3; }
         .confirmation {
           position: fixed; z-index: 2147483647; display: none; width: min(330px, calc(100vw - 28px));
           padding: 17px; border: 1px solid #ded9cf; border-radius: 16px; background: #fffdf8;
@@ -212,6 +323,7 @@
         @media (max-width: 680px) {
           .help > span:not(.live-dot):not(.keys) { display: none; }
           .keys { margin-left: 0; }
+          .identity-panel { top: 10px; right: 10px; width: min(290px, calc(100vw - 20px)); }
         }
       `
     }
@@ -226,6 +338,7 @@
         const point = this.pendingPoint
         const rawTarget = document.elementFromPoint(point.x, point.y)
         if (!(rawTarget instanceof Element) || this.host?.contains(rawTarget)) return
+        this.hoveredElement = rawTarget
 
         const result = this.findCandidates(rawTarget)
         this.candidates = result.candidates
@@ -336,7 +449,9 @@
       let score = Math.max(0, 4 - depthIndex * 0.22)
 
       if (element.matches(SEMANTIC_SELECTOR)) score += 8
+      if (element.matches(YOUTUBE_VIDEO_UNIT_SELECTOR)) score += 6
       if (element.matches('article,[role="article"],[role="listitem"]')) score += 4
+      if (element.matches('[class*="comments-comment-item" i], ytd-comment-thread-renderer, ytd-comment-view-model')) score += 6
       if (element.matches('li,tr')) score += 2
       if (this.hasRepeatedSiblings(element)) score += 7
       if (element.querySelector('h1,h2,h3,h4,[role="heading"]')) score += 1.5
@@ -381,17 +496,405 @@
     }
 
     setTarget(target) {
-      this.target = target
+      clearTimeout(this.identityRetryTimer)
       if (!target) {
+        this.target = null
+        this.identityResult = null
         this.boxElement.classList.remove('is-visible')
         return
       }
 
-      this.positionBox(target)
-      const description = this.describeTarget(target)
+      const result = this.findIdentity(target)
+      this.identityResult = result
+      this.renderIdentity(result)
+
+      // Container selection and identity resolution are related signals, not a
+      // single gate. Keep a viable content box selectable when identity lookup
+      // is uncertain; only expand to a resolved surrounding/page box when one
+      // was confidently found.
+      this.target = result.status === 'found' && result.container ? result.container : target
+      this.positionBox(this.target)
+      const description = this.describeTarget(this.target)
       const level = this.candidates.length > 1 ? ` · ${this.candidateIndex + 1}/${this.candidates.length}` : ''
       this.labelElement.textContent = `${description.label} · ${description.width}×${description.height}${level}`
       this.boxElement.classList.add('is-visible')
+
+      if (result.status === 'none' && this.isYouTubePage()) {
+        this.scheduleIdentityRetry(this.target)
+      }
+    }
+
+    scheduleIdentityRetry(target) {
+      this.identityRetryTimer = setTimeout(() => {
+        if (!this.active || this.locked || this.target !== target || !target.isConnected) return
+
+        const result = this.findIdentity(target)
+        this.identityResult = result
+        this.renderIdentity(result)
+        if (result.status === 'found' && result.container) {
+          this.target = result.container
+          this.positionBox(this.target)
+          const description = this.describeTarget(this.target)
+          const level = this.candidates.length > 1 ? ` · ${this.candidateIndex + 1}/${this.candidates.length}` : ''
+          this.labelElement.textContent = `${description.label} · ${description.width}×${description.height}${level}`
+        }
+      }, 350)
+    }
+
+    findIdentity(target) {
+      if (!target) return { status: 'none', reason: 'No content box selected' }
+
+      const siteResult = this.findSiteIdentity(target)
+      if (siteResult) return siteResult
+
+      const directResult = this.findIdentityInContainer(target)
+      if (directResult.status !== 'none') {
+        return { ...directResult, scope: 'current', container: target }
+      }
+
+      const baseRect = target.getBoundingClientRect()
+      const baseArea = Math.max(baseRect.width * baseRect.height, 1)
+      let inspected = 0
+
+      for (let index = this.candidateIndex + 1; index < this.candidates.length; index += 1) {
+        const surrounding = this.candidates[index]
+        const rect = surrounding.getBoundingClientRect()
+        const area = rect.width * rect.height
+        const areaGrowth = area / baseArea
+        const viewportRatio = area / Math.max(window.innerWidth * window.innerHeight, 1)
+
+        if (areaGrowth > MAX_IDENTITY_SCOPE_GROWTH || viewportRatio > 0.68) break
+        inspected += 1
+        if (inspected > 3) break
+
+        const result = this.findIdentityInContainer(surrounding)
+        if (result.status !== 'none') {
+          return { ...result, scope: 'surrounding', container: surrounding }
+        }
+      }
+
+      return { status: 'none', reason: 'No linked seller, author, or commenter found', scope: 'current' }
+    }
+
+    findIdentityInContainer(container) {
+      const anchors = []
+      if (container.matches?.('a[href]')) anchors.push(container)
+      anchors.push(...container.querySelectorAll('a[href]'))
+
+      const grouped = new Map()
+      for (const anchor of anchors.slice(0, 80)) {
+        const candidate = this.buildIdentityCandidate(anchor, container)
+        if (!candidate || candidate.score < MIN_IDENTITY_SCORE) continue
+        const existing = grouped.get(candidate.key)
+        if (!existing || candidate.score > existing.score) grouped.set(candidate.key, candidate)
+      }
+
+      const candidates = [...grouped.values()].sort((a, b) => b.score - a.score)
+      if (candidates.length === 0) return { status: 'none' }
+
+      const top = candidates[0]
+      const runnerUp = candidates[1]
+      if (runnerUp && top.score - runnerUp.score < 3) {
+        return {
+          status: 'ambiguous',
+          reason: 'Multiple possible people are linked in this box',
+          count: candidates.length,
+          candidates: candidates.slice(0, 3).map(({ label, type, href, score }) => ({ label, type, href, score })),
+        }
+      }
+
+      return {
+        status: 'found',
+        label: top.label,
+        type: top.type,
+        href: top.href,
+        score: top.score,
+      }
+    }
+
+    findSiteIdentity(target) {
+      const route = this.getIdentityRoute(location.href)
+      const isYouTube = this.isYouTubePage()
+
+      if (isYouTube) {
+        const videoUnit =
+          this.findYouTubeVideoUnit(this.hoveredElement) || this.findYouTubeVideoUnit(target)
+        if (videoUnit) {
+          if (route?.site === 'youtube') {
+            const pageHeader = document.querySelector(
+              'yt-page-header-renderer, ytd-c4-tabbed-header-renderer, #page-header'
+            )
+            if (pageHeader) {
+              const pageIdentity = this.buildPageHeaderIdentity(pageHeader, route)
+              if (pageIdentity) {
+                return { ...pageIdentity, scope: 'page-context', container: videoUnit }
+              }
+            }
+          }
+
+          const result = this.findIdentityInContainer(videoUnit)
+          if (result.status !== 'none') {
+            return { ...result, scope: 'video-unit', container: videoUnit }
+          }
+        }
+
+        const channelHeader = target.closest(
+          'yt-page-header-renderer, ytd-c4-tabbed-header-renderer, #page-header'
+        )
+        if (channelHeader && route?.site === 'youtube') {
+          return this.buildPageHeaderIdentity(channelHeader, route)
+        }
+
+        if (location.pathname === '/watch') {
+          const player = target.closest('#movie_player, ytd-player, #player')
+          if (player) {
+            const owner = document.querySelector(
+              'ytd-watch-metadata ytd-video-owner-renderer, #owner ytd-video-owner-renderer'
+            )
+            if (owner) {
+              const result = this.findIdentityInContainer(owner)
+              if (result.status === 'found') {
+                return { ...result, scope: 'page-context', container: player }
+              }
+            }
+          }
+        }
+      }
+
+      if (route?.site === 'linkedin') {
+        const profileHeader = target.closest(
+          'main [data-view-name*="profile" i], main .pv-top-card, main .org-top-card, main > section'
+        )
+        if (profileHeader?.querySelector('h1,[role="heading"]')) {
+          return this.buildPageHeaderIdentity(profileHeader, route)
+        }
+      }
+
+      return null
+    }
+
+    isYouTubePage() {
+      const host = location.hostname.replace(/^www\./i, '').toLowerCase()
+      return host === 'youtube.com' || host.endsWith('.youtube.com')
+    }
+
+    findYouTubeVideoUnit(target) {
+      if (!(target instanceof Element)) return null
+
+      const fullUnit = target.closest(
+        'ytd-video-renderer, ytd-rich-item-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer, ytd-playlist-video-renderer, ytd-reel-item-renderer'
+      )
+      return fullUnit || target.closest('yt-lockup-view-model')
+    }
+
+    buildPageHeaderIdentity(container, route) {
+      const heading = container.querySelector('h1,[role="heading"][aria-level="1"]')
+      const label = (heading?.innerText || '').replace(/\s+/g, ' ').trim()
+      if (!label || label.length > 90) return null
+
+      return {
+        status: 'found',
+        label,
+        type: route.type,
+        href: route.href,
+        score: 20,
+        scope: 'page-header',
+        container,
+      }
+    }
+
+    buildIdentityCandidate(anchor, container) {
+      if (!(anchor instanceof HTMLAnchorElement)) return null
+      if (anchor.closest('nav,header,footer,[role="navigation"]')) return null
+
+      const rawHref = anchor.getAttribute('href') || ''
+      if (!rawHref || /^(javascript:|mailto:|tel:)/i.test(rawHref)) return null
+
+      const label = this.getIdentityLabel(anchor)
+      if (!label || label.length > 90) return null
+
+      const href = anchor.href || rawHref
+      const context = this.getIdentityContext(anchor, container)
+      const identityRoute = this.getIdentityRoute(href)
+      let hrefText = href
+      try {
+        hrefText = decodeURIComponent(href)
+      } catch {
+        // Keep the browser-normalized URL when a page contains malformed escapes.
+      }
+      hrefText = hrefText.replace(/[?#].*$/, '')
+      const nearbyText = (anchor.parentElement?.innerText || '').trim().slice(0, 180)
+      let score = 0
+
+      if (anchor.matches('[rel~="author"], [itemprop="author"]')) score += 12
+      if (IDENTITY_WORDS.test(context)) score += 8
+      if (PRIMARY_IDENTITY_WORDS.test(context)) score += 10
+      if (identityRoute) score += 14
+      if (IDENTITY_WORDS.test(hrefText)) score += 6
+      if (/\/(?:u|users?|profiles?|members?|authors?|sellers?|shops?|stores?|channels?)\//i.test(hrefText)) score += 5
+      if (/(?:^|\/)@[\w.-]+\/?$/i.test(hrefText) || label.startsWith('@')) score += 10
+      if (/\b(?:by|from|posted by|sold by|seller|author)\b/i.test(nearbyText)) score += 4
+      if (anchor.querySelector('img,[role="img"]') || anchor.previousElementSibling?.matches?.('img,[role="img"]')) score += 2
+      if (
+        identityRoute?.site === 'linkedin' &&
+        (SECONDARY_ATTRIBUTION_WORDS.test(context) ||
+          /\b(?:liked|likes|recommended|celebrated|supports) this\b/i.test(nearbyText))
+      ) {
+        score -= 20
+      }
+      const nearestUnit = anchor.closest(CONTENT_UNIT_SELECTOR)
+      if (nearestUnit && nearestUnit !== container && container.contains(nearestUnit)) score -= 10
+      if (NON_IDENTITY_WORDS.test(context) && !IDENTITY_WORDS.test(context)) score -= 8
+      if (anchor.querySelector('h1,h2,h3,h4') || anchor.closest('[class*="title" i]')) score -= 7
+      if (rawHref.startsWith('#') && !IDENTITY_WORDS.test(context)) score -= 5
+      if (/^(more|details?|read more|view|open|share|reply|comments?|save)$/i.test(label)) score -= 10
+
+      const type = identityRoute?.type || this.inferIdentityType(`${context} ${hrefText} ${nearbyText}`)
+      const canonicalHref = identityRoute?.href || href
+      const key = this.normalizeIdentityKey(canonicalHref, label)
+      return { key, label, type, href: canonicalHref, score }
+    }
+
+    getIdentityLabel(anchor) {
+      const imageAlt = anchor.querySelector('img[alt]')?.getAttribute('alt') || ''
+      const label =
+        anchor.getAttribute('aria-label') ||
+        anchor.getAttribute('title') ||
+        anchor.innerText ||
+        imageAlt
+      return label
+        .replace(/\s+/g, ' ')
+        .replace(/^(?:view|visit|open|go to)\s+(?:the\s+)?(?:profile|store|shop|channel)\s+(?:of|for)?\s*/i, '')
+        .trim()
+    }
+
+    getIdentityContext(anchor, container) {
+      const parts = []
+      let current = anchor
+      let depth = 0
+      while (current && current !== container.parentElement && depth < 3) {
+        parts.push(
+          current.tagName,
+          current.id,
+          current.className,
+          current.getAttribute?.('data-testid'),
+          current.getAttribute?.('aria-label'),
+          current.getAttribute?.('rel'),
+          current.getAttribute?.('itemprop')
+        )
+        current = current.parentElement
+        depth += 1
+      }
+      return parts.filter((value) => typeof value === 'string').join(' ')
+    }
+
+    inferIdentityType(text) {
+      if (/seller|vendor|merchant|shop|store/i.test(text)) return 'seller'
+      if (/commenter|comment-author|comment author/i.test(text)) return 'commenter'
+      if (/channel/i.test(text)) return 'channel'
+      if (/author|byline|creator|poster|posted by/i.test(text)) return 'author'
+      return 'person'
+    }
+
+    getIdentityRoute(href) {
+      let url
+      try {
+        url = new URL(href, location.href)
+      } catch {
+        return null
+      }
+
+      const host = url.hostname.replace(/^www\./i, '').toLowerCase()
+      const segments = url.pathname.split('/').filter(Boolean)
+
+      if (
+        /^(?:[a-z0-9-]+\.)*carousell\.[a-z]{2,3}(?:\.[a-z]{2})?$/i.test(host) &&
+        segments[0] === 'u' &&
+        segments[1]
+      ) {
+        url.pathname = `/u/${segments[1]}`
+        url.search = ''
+        url.hash = ''
+        return { site: 'carousell', type: 'seller', href: url.href }
+      }
+
+      if ((host === 'linkedin.com' || host.endsWith('.linkedin.com')) && ['in', 'company', 'school', 'showcase'].includes(segments[0])) {
+        if (!segments[1]) return null
+        url.pathname = `/${segments[0]}/${segments[1]}`
+        url.search = ''
+        url.hash = ''
+        return {
+          site: 'linkedin',
+          type: segments[0] === 'in' ? 'person' : 'organization',
+          href: url.href,
+        }
+      }
+
+      if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
+        const first = segments[0] || ''
+        const isChannelRoute =
+          first.startsWith('@') ||
+          (['channel', 'c', 'user'].includes(first) && Boolean(segments[1]))
+        if (!isChannelRoute) return null
+        url.pathname = first.startsWith('@') ? `/${first}` : `/${first}/${segments[1]}`
+        url.search = ''
+        url.hash = ''
+        return { site: 'youtube', type: 'channel', href: url.href }
+      }
+
+      return null
+    }
+
+    normalizeIdentityKey(href, label) {
+      try {
+        const url = new URL(href, location.href)
+        url.hash = ''
+        if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/$/, '')
+        return url.href
+      } catch {
+        return `${href}|${label.toLowerCase()}`
+      }
+    }
+
+    countNestedContentUnits(container) {
+      const matches = [...container.querySelectorAll(CONTENT_UNIT_SELECTOR)].filter(
+        (element) => element !== container && this.isViable(element)
+      )
+      const topLevel = matches.filter(
+        (element) => !matches.some((other) => other !== element && other.contains(element))
+      )
+      return topLevel.length
+    }
+
+    renderIdentity(result) {
+      const state = result?.status || 'none'
+      this.identityStateElement.dataset.status = state
+
+      if (state === 'found') {
+        const typeLabel = result.type[0].toUpperCase() + result.type.slice(1)
+        const sources = {
+          surrounding: 'found in surrounding box',
+          'video-unit': 'linked in this video box',
+          'page-context': 'linked beside this content',
+          'page-header': 'identified from this profile page',
+        }
+        const source = sources[result.scope] || 'linked in this box'
+        this.identityStateElement.querySelector('.identity-icon').textContent = '✓'
+        this.identityTitleElement.textContent = `${typeLabel} · ${result.label}`
+        this.identityDetailElement.textContent = source
+        return
+      }
+
+      if (state === 'ambiguous') {
+        this.identityStateElement.querySelector('.identity-icon').textContent = '!'
+        this.identityTitleElement.textContent = result.count ? `${result.count} possible people or items` : 'Multiple possible people'
+        this.identityDetailElement.textContent = result.reason
+        return
+      }
+
+      this.identityStateElement.querySelector('.identity-icon').textContent = '—'
+      this.identityTitleElement.textContent = 'No linked person found'
+      this.identityDetailElement.textContent = result.reason || 'Try a nearby or larger content box'
     }
 
     positionBox(target) {

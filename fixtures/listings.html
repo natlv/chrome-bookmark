@@ -33,7 +33,34 @@
       .result-row h3 { margin: 0 0 5px; font-size: 16px; }
       .result-row p { margin: 0; color: #6b7678; font-size: 12px; }
       .result-row a { color: #bb4b34; font-size: 12px; font-weight: 800; }
+      .post-section { margin-top: 54px; }
+      .post-section > h2 { font-size: 28px; }
+      .post-card { display: grid; grid-template-columns: 1.25fr .75fr; overflow: hidden; margin-top: 18px; border: 1px solid #ddd7cc; border-radius: 18px; background: #fffdf8; }
+      .media-card { display: grid; min-height: 260px; place-items: center; background: #dbe6e2; }
+      .media-card img { width: 118px; height: 118px; border-radius: 50%; object-fit: cover; box-shadow: 0 14px 32px rgb(35 77 77 / 18%); }
+      .post-copy { padding: 25px; }
+      .post-copy h3 { margin: 13px 0 8px; font-size: 24px; }
+      .post-copy p { color: #697477; font-size: 13px; line-height: 1.55; }
+      .post-author { color: #c9543a; font-size: 12px; font-weight: 800; }
+      .comments { display: grid; gap: 10px; margin-top: 16px; }
+      .comment-card { padding: 16px; border: 1px solid #ddd7cc; border-radius: 14px; background: rgb(255 253 248 / 80%); }
+      .comment-author { color: #b84a34; font-size: 12px; font-weight: 800; }
+      .comment-card p { margin: 7px 0 0; color: #606c6f; font-size: 13px; }
+      .platform-section { margin-top: 54px; }
+      .platform-section > h2 { font-size: 28px; }
+      .platform-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 18px; }
+      .platform-card { overflow: hidden; border: 1px solid #ddd7cc; border-radius: 18px; background: #fffdf8; }
+      .platform-media { display: grid; min-height: 180px; place-items: center; color: #32535c; background: #dbe7e5; font-size: 46px; }
+      .platform-copy { padding: 18px; }
+      .platform-copy h3 { margin: 7px 0 8px; font-size: 20px; }
+      .platform-copy p { margin: 0; color: #697477; font-size: 13px; line-height: 1.55; }
+      .actor, .channel-name { color: #bd4c35; font-size: 12px; font-weight: 800; text-decoration: none; }
+      .social-context { padding: 11px 18px; border-bottom: 1px solid #ebe5da; color: #727c7e; font-size: 12px; }
+      .social-context a { color: #4d5e64; font-weight: 750; }
+      .embedded-comment { margin: 15px 18px 18px; padding: 13px; border: 1px solid #e1dbd0; border-radius: 12px; background: #f8f5ef; }
+      .embedded-comment p { margin: 6px 0 0; color: #697477; font-size: 12px; }
       @media (max-width: 780px) { .product-grid { grid-template-columns: 1fr; } }
+      @media (max-width: 780px) { .platform-grid { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body>
@@ -66,9 +93,84 @@
       <section class="results">
         <h2>Plain repeated result rows</h2>
         <div class="result-list">
-          <div class="result-row"><div class="avatar">🪑</div><div><h3>Oak reading chair</h3><p>Furniture listing · ships in two days</p></div><a href="#seller-craft">Craft House</a></div>
-          <div class="result-row"><div class="avatar">🧺</div><div><h3>Woven storage basket</h3><p>Home listing · natural reed</p></div><a href="#seller-craft">Craft House</a></div>
-          <div class="result-row"><div class="avatar">🫖</div><div><h3>Stoneware teapot</h3><p>Kitchen listing · 900 ml</p></div><a href="#seller-field">Field Studio</a></div>
+          <div class="result-row"><div class="avatar">🪑</div><div><h3>Oak reading chair</h3><p>Furniture listing · ships in two days</p></div><a href="/sellers/craft-house">Craft House</a></div>
+          <div class="result-row"><div class="avatar">🧺</div><div><h3>Woven storage basket</h3><p>Home listing · natural reed</p></div><a href="/sellers/craft-house">Craft House</a></div>
+          <div class="result-row"><div class="avatar">🫖</div><div><h3>Stoneware teapot</h3><p>Kitchen listing · 900 ml</p></div><a href="/sellers/field-studio">Field Studio</a></div>
+          <div class="result-row"><div class="avatar">⌚</div><div><h3>Vintage field watch</h3><p>Carousell-shaped listing · direct username link</p></div><a href="https://www.carousell.sg/u/watch.pieces/">watch.pieces</a></div>
+        </div>
+      </section>
+
+      <section class="post-section">
+        <h2>Nested media and comments</h2>
+        <article class="post-card">
+          <div class="media-card" aria-label="Photo inside the post"><img alt="Blue wave illustration" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' fill='%23bdd8d6'/%3E%3Cpath d='M0 78c22-39 43-43 67-17 17 18 32 13 53-4v63H0z' fill='%232d7581'/%3E%3Cpath d='M7 79c19-24 36-23 54-6 20 19 39 9 59-5' fill='none' stroke='%23f9faf4' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='83' cy='31' r='13' fill='%23f4b26b'/%3E%3C/svg%3E" /></div>
+          <div class="post-copy">
+            <a class="post-author" rel="author" href="/profiles/maya-chen">Maya Chen</a>
+            <h3>A quiet morning by the water</h3>
+            <p>Hover the image, then use the down arrow to choose the inner media box. Identity detection should climb back to this surrounding post.</p>
+          </div>
+        </article>
+        <div class="comments" aria-label="Comments">
+          <div class="comment-card" role="article"><a class="comment-author" href="/users/rohan">Rohan</a><p>The light in this is wonderful.</p></div>
+          <div class="comment-card" role="article"><a class="comment-author" href="/users/leila">Leila</a><p>I like how calm the composition feels.</p></div>
+        </div>
+      </section>
+
+      <section class="platform-section">
+        <h2>LinkedIn and YouTube-shaped content</h2>
+        <div class="platform-grid">
+          <article class="feed-shared-update-v2 platform-card">
+            <div class="update-components-header social-context">
+              <a class="update-components-actor__meta-link" href="https://www.linkedin.com/in/samira-patel/">Samira Patel</a> liked this
+            </div>
+            <div class="platform-copy">
+              <div class="update-components-actor">
+                <a class="update-components-actor__meta-link actor" href="https://www.linkedin.com/in/jane-doe/">Jane Doe</a>
+              </div>
+              <h3>A post with a nested comment</h3>
+              <p>The post should resolve to Jane even though another profile is linked in its comment.</p>
+            </div>
+            <article class="comments-comment-item embedded-comment">
+              <a class="comments-post-meta__actor-link actor" href="https://www.linkedin.com/in/alex-kim/">Alex Kim</a>
+              <p>The comment itself should resolve to Alex.</p>
+            </article>
+          </article>
+
+          <ytd-video-renderer class="platform-card">
+            <div class="platform-media" aria-label="Video thumbnail">▶</div>
+            <div class="platform-copy">
+              <h3><a href="https://www.youtube.com/watch?v=fixture-video">A clearly attributed video</a></h3>
+              <div id="channel-info">
+                <yt-formatted-string id="text" class="ytd-channel-name">
+                  <a class="channel-name" aria-label="Go to channel Studio North" href="https://www.youtube.com/@StudioNorth">Studio North</a>
+                </yt-formatted-string>
+              </div>
+              <p>Hovering the thumbnail should trace to the visible channel link in this video unit.</p>
+            </div>
+          </ytd-video-renderer>
+
+          <ytd-video-renderer class="platform-card">
+            <div class="platform-media" aria-label="Video thumbnail without a nearby channel">◼</div>
+            <div class="platform-copy">
+              <h3><a href="https://www.youtube.com/watch?v=unattributed-fixture">Video whose channel link has not loaded</a></h3>
+              <p>The video box should remain selectable even though identity detection reports no linked person.</p>
+            </div>
+          </ytd-video-renderer>
+
+          <ytd-rich-item-renderer class="platform-card">
+            <div id="content">
+              <yt-lockup-view-model>
+                <div class="platform-media" aria-label="Deeply nested YouTube grid thumbnail"><span><span>▷</span></span></div>
+                <div class="platform-copy">
+                  <h3><a href="https://www.youtube.com/watch?v=grid-fixture">Video in a multi-column grid</a></h3>
+                  <div class="yt-content-metadata-view-model__metadata-row">
+                    <a class="channel-name" href="https://www.youtube.com/@GridStudio">Grid Studio</a>
+                  </div>
+                  <p>The thumbnail and channel are sibling branches inside one rich-grid video unit.</p>
+                </div>
+              </yt-lockup-view-model>
+            </div>
+          </ytd-rich-item-renderer>
         </div>
       </section>
     </main>

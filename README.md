@@ -13,9 +13,24 @@ The extension currently provides the interaction foundation only:
 - Isolated hover and confirmation UI rendered in a Shadow DOM
 - Semantic and repeated-sibling container scoring
 - Arrow-key adjustment between nested candidate boxes
+- Read-only seller/author/commenter detection while hovering
+- Bounded fallback to a surrounding box when the inner box has no identity
+- Container selection remains available when identity detection is uncertain or unavailable
+- LinkedIn actor/profile-link and YouTube channel-link recognition
+- Carousell `/u/<username>` seller-link recognition
+- YouTube watch-player lookup when the visible owner link sits beside the player
+- YouTube video-unit lookup across thumbnail/channel sibling branches, including rich grids
+- One bounded retry for YouTube components that hydrate shortly after hover
+- Profile, company, and channel headers inferred from matching LinkedIn/YouTube page routes
+- LinkedIn social-context links such as “a connection liked this” are demoted below the post author
+- Ambiguity detection when a box has competing identities
+- An always-visible **Exit** button in addition to Escape
 - Escape-to-cancel and a non-destructive confirmation step
 
-It does **not** infer an author or seller, save rules, or hide content yet.
+Identity detection is heuristic and read-only. The extension does **not** select
+an identity action, save rules, or hide content yet.
+
+TLDR current state: the detection works for Linkedin and Carousell and Youtube and Reddit (around 90%, edge cases to be ironed out later without sacrificing the main working functionality). Doesn't work at all for Ebay (expected because seller names are not displayed until you click on a specific listing). Doesn't work for Etsy (surprising because it looks similar to Carousell, may need to look into the page structure or tweak this extension's rules).
 
 ## Try it in Chrome
 
@@ -38,8 +53,11 @@ python3 -m http.server 4173
 ```
 
 Then visit `http://localhost:4173/fixtures/listings.html` and use the **Start
-selector demo** button. The fixture includes semantic `<article>` listings and
-plain repeated `<div>` result rows.
+selector demo** button. The fixture includes semantic `<article>` listings,
+plain repeated `<div>` result rows, a LinkedIn-shaped post with a nested
+comment and social attribution, plus YouTube-shaped video cards with and
+without a detectable channel. It also includes a Carousell username link and a
+multi-column YouTube rich-grid structure.
 
 ## Structure
 
