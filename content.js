@@ -788,12 +788,12 @@
       const rawHref = anchor.getAttribute('href') || ''
       if (!rawHref || /^(javascript:|mailto:|tel:)/i.test(rawHref)) return null
 
-      const label = this.getIdentityLabel(anchor)
-      if (!label || label.length > 90) return null
-
       const href = anchor.href || rawHref
       const context = this.getIdentityContext(anchor, container)
       const identityRoute = this.getIdentityRoute(href)
+      const label = this.getIdentityLabel(anchor, identityRoute)
+      if (!label || label.length > 90) return null
+
       let hrefText = href
       try {
         hrefText = decodeURIComponent(href)
@@ -833,9 +833,11 @@
       return { key, label, type, href: canonicalHref, score }
     }
 
-    getIdentityLabel(anchor) {
+    getIdentityLabel(anchor, identityRoute) {
+      const siteLabel = this.getCarousellIdentityLabel(anchor, identityRoute)
       const imageAlt = anchor.querySelector('img[alt]')?.getAttribute('alt') || ''
       const label =
+        siteLabel ||
         anchor.getAttribute('aria-label') ||
         anchor.getAttribute('title') ||
         anchor.innerText ||
@@ -844,6 +846,21 @@
         .replace(/\s+/g, ' ')
         .replace(/^(?:view|visit|open|go to)\s+(?:the\s+)?(?:profile|store|shop|channel)\s+(?:of|for)?\s*/i, '')
         .trim()
+    }
+
+    getCarousellIdentityLabel(anchor, identityRoute) {
+      if (identityRoute?.site !== 'carousell') return ''
+
+      const sellerName =
+        anchor.querySelector('[data-testid="listing-card-text-seller-name"]')?.innerText || ''
+      if (sellerName.trim()) return sellerName
+
+      try {
+        const segments = new URL(identityRoute.href).pathname.split('/').filter(Boolean)
+        return decodeURIComponent(segments[1] || '')
+      } catch {
+        return ''
+      }
     }
 
     getIdentityContext(anchor, container) {
