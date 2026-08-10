@@ -1,4 +1,4 @@
-# Mute by Entity
+# Mute Anyone
 
 A privacy-limited Chrome extension that mutes profiles per site and hides
 content they create. This repository intentionally does not use UTags code or

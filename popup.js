@@ -47,7 +47,7 @@ function renderStorageUnavailable() {
   startButton.disabled = true
   filteringStatus.textContent = 'Storage unavailable · reload extension'
   document.body.classList.add('filtering-off')
-  setStatus('Reload Mute by Entity on chrome://extensions, then refresh this website tab.')
+  setStatus('Reload Mute Anyone on chrome://extensions, then refresh this website tab.')
 }
 
 function renderProfiles() {
