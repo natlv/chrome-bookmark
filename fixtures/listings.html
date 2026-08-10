@@ -30,6 +30,8 @@
       .results { margin-top: 54px; }
       .results h2 { font-size: 28px; }
       .result-list { display: grid; gap: 10px; margin-top: 18px; }
+      .marketplace-cell { min-width: 0; }
+      .marketplace-shell { height: 100%; }
       .result-row { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 16px; padding: 13px; border: 1px solid #ddd7cc; border-radius: 14px; background: rgb(255 253 248 / 80%); }
       .avatar { display: grid; width: 64px; height: 64px; place-items: center; border-radius: 12px; background: #dfe8e3; font-size: 25px; }
       .result-row h3 { margin: 0 0 5px; font-size: 16px; }
@@ -103,7 +105,11 @@
           <div class="result-row"><div class="avatar">🪑</div><div><h3>Oak reading chair</h3><p>Furniture listing · ships in two days</p></div><a href="/sellers/craft-house">Craft House</a></div>
           <div class="result-row"><div class="avatar">🧺</div><div><h3>Woven storage basket</h3><p>Home listing · natural reed</p></div><a href="/sellers/craft-house">Craft House</a></div>
           <div class="result-row"><div class="avatar">🫖</div><div><h3>Stoneware teapot</h3><p>Kitchen listing · 900 ml</p></div><a href="/sellers/field-studio">Field Studio</a></div>
-          <div class="result-row"><div class="avatar">⌚</div><div><h3>Vintage field watch</h3><p>Carousell-shaped listing · seller name and date share one profile link</p></div><a href="https://www.carousell.sg/u/watch.pieces/"><span data-testid="listing-card-text-seller-name">watch.pieces</span><br><span>2 days ago</span></a></div>
+          <div class="marketplace-cell">
+            <div class="marketplace-shell">
+              <div class="result-row" data-testid="listing-card-41001"><div class="avatar">⌚</div><div><h3>Vintage field watch</h3><p>Carousell-shaped listing · nested inside a separate grid cell</p></div><a href="https://www.carousell.sg/u/watch.pieces/"><span data-testid="listing-card-text-seller-name">watch.pieces</span><br><span>2 days ago</span></a></div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -227,14 +233,24 @@
             </div>
           </article>
 
-          <article class="etsy-listing-card platform-card" data-listing-id="1871190283">
-            <div class="v2-listing-card" data-shop-id="43008218">
-              <div class="platform-media" aria-label="Etsy listing thumbnail">✦</div>
-              <div class="platform-copy">
-                <h3><a data-listing-id="1871190283" href="https://www.etsy.com/listing/1871190283/field-watch">Handmade field watch</a></h3>
-                <p>PaperAmazeDigital</p>
-                <p>The visible name is ignored; the stable shop ID comes from the card attribute.</p>
+          <div class="marketplace-cell">
+            <article class="etsy-listing-card platform-card" data-listing-id="1871190283">
+              <div class="v2-listing-card marketplace-shell" data-shop-id="43008218">
+                <div class="platform-media" aria-label="Etsy listing thumbnail">✦</div>
+                <div class="platform-copy">
+                  <h3><a data-listing-id="1871190283" href="https://www.etsy.com/listing/1871190283/field-watch">Handmade field watch</a></h3>
+                  <p>PaperAmazeDigital</p>
+                  <p>The stable shop ID is preserved while the surrounding grid cell collapses.</p>
+                </div>
               </div>
+            </article>
+          </div>
+
+          <article class="platform-card">
+            <div class="platform-media" aria-label="Listing after the Etsy card">◆</div>
+            <div class="platform-copy">
+              <h3>Following marketplace listing</h3>
+              <p>This card should move into the Etsy card’s position after that shop is muted.</p>
             </div>
           </article>
         </div>

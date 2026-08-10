@@ -12,6 +12,7 @@
   const MAX_ANCESTORS = 18
   const MIN_IDENTITY_SCORE = 7
   const MAX_IDENTITY_SCOPE_GROWTH = 8
+  const MAX_LISTING_LAYOUT_ANCESTORS = 4
   const LINKEDIN_POST_UNIT_SELECTOR =
     '[class*="feed-shared-update" i], [data-urn^="urn:li:activity:"]'
   const LINKEDIN_COMMENT_UNIT_SELECTOR =
@@ -35,6 +36,7 @@
   ].join(',')
   const ETSY_LISTING_UNIT_SELECTOR =
     '[data-shop-id], [data-listing-id], [class*="etsy-listing-card" i], [class*="v2-listing-card" i]'
+  const CAROUSELL_LISTING_TEST_ID = /^listing-card-\d+$/
   const SEMANTIC_SELECTOR = [
     'article',
     '[role="article"]',
@@ -754,6 +756,26 @@
         this.findLinkedInContentUnit(this.hoveredElement) || this.findLinkedInContentUnit(target)
       if (linkedInUnit) return this.findLinkedInUnitIdentity(linkedInUnit)
 
+      const carousellUnit =
+        this.findCarousellListingUnit(this.hoveredElement) ||
+        this.findCarousellListingUnit(target)
+      if (
+        carousellUnit &&
+        (this.isCarousellPage() || this.hasCarousellSellerLink(carousellUnit))
+      ) {
+        const sellerResult = this.findIdentityInContainer(
+          carousellUnit,
+          (anchor) => this.getIdentityRoute(anchor.href)?.site === 'carousell'
+        )
+        if (sellerResult.status !== 'none') {
+          return {
+            ...sellerResult,
+            scope: 'carousell-listing',
+            container: this.findListingLayoutUnit(carousellUnit),
+          }
+        }
+      }
+
       const etsyUnit =
         this.findEtsyListingUnit(this.hoveredElement) || this.findEtsyListingUnit(target)
       if (
@@ -762,12 +784,20 @@
       ) {
         const shopIdResult = this.findEtsyShopId(etsyUnit)
         if (shopIdResult.status === 'found') {
-          return { ...shopIdResult, scope: 'etsy-shop-id', container: etsyUnit }
+          return {
+            ...shopIdResult,
+            scope: 'etsy-shop-id',
+            container: this.findListingLayoutUnit(etsyUnit),
+          }
         }
 
         const linkedResult = this.findIdentityInContainer(etsyUnit)
         if (linkedResult.status !== 'none') {
-          return { ...linkedResult, scope: 'current', container: etsyUnit }
+          return {
+            ...linkedResult,
+            scope: 'current',
+            container: this.findListingLayoutUnit(etsyUnit),
+          }
         }
       }
 
@@ -984,12 +1014,63 @@
       return host === 'etsy.com' || host.endsWith('.etsy.com')
     }
 
+    isCarousellPage() {
+      const host = location.hostname.replace(/^www\./i, '').toLowerCase()
+      return /^(?:[a-z0-9-]+\.)*carousell\.[a-z]{2,3}(?:\.[a-z]{2})?$/i.test(host)
+    }
+
+    findCarousellListingUnit(target) {
+      if (!(target instanceof Element)) return null
+
+      let current = target
+      for (let depth = 0; current && depth <= MAX_LISTING_LAYOUT_ANCESTORS; depth += 1) {
+        if (CAROUSELL_LISTING_TEST_ID.test(current.getAttribute('data-testid') || '')) {
+          return current
+        }
+        current = current.parentElement
+      }
+
+      const nestedUnits = [...target.querySelectorAll('[data-testid^="listing-card-"]')]
+        .filter((element) =>
+          CAROUSELL_LISTING_TEST_ID.test(element.getAttribute('data-testid') || '')
+        )
+      return nestedUnits.length === 1 ? nestedUnits[0] : null
+    }
+
+    hasCarousellSellerLink(container) {
+      return [...container.querySelectorAll('a[href]')].some(
+        (anchor) => this.getIdentityRoute(anchor.href)?.site === 'carousell'
+      )
+    }
+
     findEtsyListingUnit(target) {
       if (!(target instanceof Element)) return null
-      return (
+      const closestUnit =
         target.closest('[data-shop-id]') ||
         target.closest('[data-listing-id], [class*="etsy-listing-card" i], [class*="v2-listing-card" i]')
-      )
+      if (closestUnit) return closestUnit
+
+      const nestedUnits = [...target.querySelectorAll('[data-shop-id]')]
+      return nestedUnits.length === 1 ? nestedUnits[0] : null
+    }
+
+    findListingLayoutUnit(listingUnit) {
+      let current = listingUnit
+
+      for (let depth = 0; depth < MAX_LISTING_LAYOUT_ANCESTORS; depth += 1) {
+        const parent = current.parentElement
+        if (!parent) break
+
+        const parentDisplay = getComputedStyle(parent).display
+        const isLayout = ['flex', 'inline-flex', 'grid', 'inline-grid'].includes(parentDisplay)
+        const isRepeatedLayout = isLayout && parent.children.length > 1
+        const isListItem = current.matches('li') && parent.matches('ul,ol')
+        if (isRepeatedLayout || isListItem) return current
+
+        current = parent
+      }
+
+      return listingUnit
     }
 
     findEtsyShopId(container) {

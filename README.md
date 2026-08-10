@@ -23,6 +23,7 @@ The extension currently provides:
 - LinkedIn actor/profile-link and YouTube channel-link recognition
 - Carousell `/u/<username>` seller-link recognition
 - Etsy listing-card `data-shop-id` extraction, preserving the stable numeric shop ID
+- Marketplace listing-cell collapsing for Carousell and Etsy so filtered grids reflow
 - YouTube watch-player lookup when the visible owner link sits beside the player
 - YouTube video-unit lookup across thumbnail/channel sibling branches, including rich grids
 - One bounded retry for YouTube components that hydrate shortly after hover
