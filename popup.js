@@ -6,6 +6,7 @@ const mutedList = document.querySelector('#muted-list')
 const mutedCount = document.querySelector('#muted-count')
 const mutedEmpty = document.querySelector('#muted-empty')
 const siteName = document.querySelector('#site-name')
+const openSettingsButton = document.querySelector('#open-settings')
 
 const ENABLED_STORAGE_KEY = 'muteByEntityEnabled'
 const MUTED_STORAGE_PREFIX = 'muteByEntityMuted:'
@@ -146,6 +147,14 @@ async function startSelection() {
 }
 
 startButton.addEventListener('click', startSelection)
+openSettingsButton.addEventListener('click', async () => {
+  try {
+    await chrome.runtime.openOptionsPage()
+    window.close()
+  } catch {
+    setStatus('Could not open settings.')
+  }
+})
 enabledInput.addEventListener('change', async () => {
   const enabled = enabledInput.checked
   enabledInput.disabled = true

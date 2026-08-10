@@ -438,6 +438,32 @@ kbd {
   display: none;
 }
 
+.settings-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  color: #465457;
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.settings-link:hover {
+  color: #176143;
+  background: rgb(255 253 249 / 62%);
+}
+
+.settings-link:focus-visible {
+  outline: 3px solid rgb(240 106 75 / 25%);
+  outline-offset: 2px;
+}
+
 footer {
   display: flex;
   align-items: center;

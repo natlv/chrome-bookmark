@@ -14,6 +14,7 @@ The extension currently provides:
 - Per-hostname muted profile sets stored only on the current device
 - A popup that starts profile detection on demand and lists profiles muted for the current site
 - One-click unmuting from the popup
+- A settings page that lists muted profiles across every site with one-click unmuting
 - Isolated hover and confirmation UI rendered in a Shadow DOM
 - Semantic and repeated-sibling container scoring
 - Read-only seller/author/commenter detection while hovering
@@ -60,7 +61,9 @@ TLDR current state: the detection works for Linkedin and Carousell and Youtube a
 5. Choose **Detect new profile**, point at a content box, and confirm the detected profile.
 
 Use **Automatic muting** in the popup to pause or resume all filtering without
-removing saved profiles. The muted list is scoped to the current hostname.
+removing saved profiles. The popup list is scoped to the current hostname. Use
+**Manage all sites** to open the full settings page, or open the extension's
+options from `chrome://extensions`.
 
 After updating the unpacked extension, use **Reload** on `chrome://extensions`
 and refresh existing website tabs. Chrome does not activate new manifest
@@ -91,6 +94,7 @@ content is hidden automatically.
 
 - `manifest.json` — minimal Chrome MV3 permissions and popup registration
 - `hello.html`, `popup.css`, `popup.js` — extension popup
+- `options.html`, `options.css`, `options.js` — all-sites settings page
 - `content.js` — page-local container-selection controller and isolated UI
 - `fixtures/listings.html` — deterministic visual test page
 
