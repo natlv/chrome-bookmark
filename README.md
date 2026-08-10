@@ -16,7 +16,6 @@ The extension currently provides:
 - One-click unmuting from the popup
 - Isolated hover and confirmation UI rendered in a Shadow DOM
 - Semantic and repeated-sibling container scoring
-- Arrow-key adjustment between nested candidate boxes
 - Read-only seller/author/commenter detection while hovering
 - Bounded fallback to a surrounding box when the inner box has no identity
 - Container selection remains available when identity detection is uncertain or unavailable
@@ -67,8 +66,7 @@ After updating the unpacked extension, use **Reload** on `chrome://extensions`
 and refresh existing website tabs. Chrome does not activate new manifest
 permissions, including local storage, until the extension is reloaded.
 
-Use the up/down arrow keys if a page has nested candidate containers. Press
-Escape to cancel.
+Press Escape to cancel profile detection.
 
 ## Local selection fixture
 

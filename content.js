@@ -289,7 +289,7 @@
           <span class="live-dot"></span>
           <strong>Choose a content box</strong>
           <span>Move over a listing or post</span>
-          <span class="keys"><kbd>↑</kbd><kbd>↓</kbd><span class="key-label">adjust</span><kbd>Esc</kbd><span class="key-label">exit</span></span>
+          <span class="keys"><kbd>Esc</kbd><span class="key-label">exit</span></span>
         </div>
         <aside class="identity-panel selector-type selector-panel" aria-live="polite">
           <div class="identity-header">
@@ -571,18 +571,6 @@
         }
         return
       }
-
-      if (this.locked) return
-      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      const step = event.key === 'ArrowUp' ? 1 : -1
-      const nextIndex = Math.max(0, Math.min(this.candidates.length - 1, this.candidateIndex + step))
-      if (nextIndex !== this.candidateIndex) {
-        this.candidateIndex = nextIndex
-        this.setTarget(this.candidates[this.candidateIndex])
-      }
     }
 
     onViewportChange() {
@@ -714,8 +702,7 @@
       this.target = result.status === 'found' && result.container ? result.container : target
       this.positionBox(this.target)
       const description = this.describeTarget(this.target)
-      const level = this.candidates.length > 1 ? ` · ${this.candidateIndex + 1}/${this.candidates.length}` : ''
-      this.labelElement.textContent = `${description.label} · ${description.width}×${description.height}${level}`
+      this.labelElement.textContent = `${description.label} · ${description.width}×${description.height}`
       this.boxElement.classList.add('is-visible')
 
       if (result.status === 'none' && this.isYouTubePage()) {
@@ -734,8 +721,7 @@
           this.target = result.container
           this.positionBox(this.target)
           const description = this.describeTarget(this.target)
-          const level = this.candidates.length > 1 ? ` · ${this.candidateIndex + 1}/${this.candidates.length}` : ''
-          this.labelElement.textContent = `${description.label} · ${description.width}×${description.height}${level}`
+          this.labelElement.textContent = `${description.label} · ${description.width}×${description.height}`
         }
       }, 350)
     }
@@ -816,7 +802,7 @@
     findSiteIdentity(target) {
       const route = this.getIdentityRoute(location.href)
       const linkedInUnit =
-        this.findLinkedInContentUnit(target) || this.findLinkedInContentUnit(this.hoveredElement)
+        this.findLinkedInContentUnit(this.hoveredElement) || this.findLinkedInContentUnit(target)
       if (linkedInUnit) return this.findLinkedInUnitIdentity(linkedInUnit)
 
       const etsyUnit =
