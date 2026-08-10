@@ -7,7 +7,6 @@
   const HIDDEN_STYLE_ID = 'mute-by-entity-hidden-style'
   const ENABLED_STORAGE_KEY = 'muteByEntityEnabled'
   const MUTED_STORAGE_PREFIX = 'muteByEntityMuted:'
-  const LOCAL_STORAGE_PREFIX = '__muteByEntity:'
   const MIN_WIDTH = 150
   const MIN_HEIGHT = 64
   const MAX_ANCESTORS = 18
@@ -116,68 +115,24 @@
   }
 
   class ExtensionStateStore {
+    constructor() {
+      this.fixtureState = {}
+    }
+
     async get(keys) {
       if (globalThis.chrome?.storage?.local) {
-        const result = await chrome.storage.local.get(keys)
-        const fallback = this.getFallback(keys)
-        const migrated = {}
-
-        for (const key of keys) {
-          const fallbackValue = fallback[key]
-          if (fallbackValue === undefined) continue
-
-          if (
-            key.startsWith(MUTED_STORAGE_PREFIX) &&
-            Array.isArray(result[key]) &&
-            Array.isArray(fallbackValue)
-          ) {
-            const profiles = new Map()
-            for (const profile of [...fallbackValue, ...result[key]]) {
-              if (profile?.key) profiles.set(profile.key, profile)
-            }
-            result[key] = [...profiles.values()]
-            migrated[key] = result[key]
-          } else if (result[key] === undefined) {
-            result[key] = fallbackValue
-            migrated[key] = fallbackValue
-          }
-        }
-
-        if (Object.keys(migrated).length) {
-          await chrome.storage.local.set(migrated)
-          this.removeFallback(Object.keys(migrated))
-        }
-        return result
+        return chrome.storage.local.get(keys)
       }
 
       if (globalThis.chrome?.runtime?.id) {
         throw new Error('Extension storage is unavailable')
       }
 
-      return this.getFallback(keys)
-    }
-
-    getFallback(keys) {
       const result = {}
       for (const key of keys) {
-        try {
-          const value = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}${key}`)
-          if (value !== null) result[key] = JSON.parse(value)
-        } catch {
-          // Keep the fixture usable when page storage is unavailable.
-        }
+        if (Object.hasOwn(this.fixtureState, key)) result[key] = this.fixtureState[key]
       }
       return result
-    }
-
-    removeFallback(keys) {
-      for (const key of keys) {
-        try {
-          localStorage.removeItem(`${LOCAL_STORAGE_PREFIX}${key}`)
-        } catch {
-          // A successful extension-storage migration is enough if page storage is locked.
-        }
-      }
     }
 
     async set(values) {
@@ -190,13 +145,7 @@
         throw new Error('Extension storage is unavailable')
       }
 
-      for (const [key, value] of Object.entries(values)) {
-        try {
-          localStorage.setItem(`${LOCAL_STORAGE_PREFIX}${key}`, JSON.stringify(value))
-        } catch {
-          // Muting remains active for this page even if fixture storage is unavailable.
-        }
-      }
+      Object.assign(this.fixtureState, values)
     }
 
     onChanged(listener) {
