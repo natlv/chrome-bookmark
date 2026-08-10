@@ -23,13 +23,25 @@ The extension currently provides the interaction foundation only:
 - YouTube video-unit lookup across thumbnail/channel sibling branches, including rich grids
 - One bounded retry for YouTube components that hydrate shortly after hover
 - Profile, company, and channel headers inferred from matching LinkedIn/YouTube page routes
-- LinkedIn social-context links such as “a connection liked this” are demoted below the post author
+- LinkedIn posts and comments resolve against their own actor metadata, excluding
+  social-context links, inline tagged profiles, and identities from nested comments
+- LinkedIn’s semantic-class and current obfuscated-class feed renderers are handled
+  separately; the current renderer uses feed/comment boundaries and repeated avatar
+  identity clusters rather than unstable generated class names
 - Ambiguity detection when a box has competing identities
 - An always-visible **Exit** button in addition to Escape
 - Escape-to-cancel and a non-destructive confirmation step
 
 Identity detection is heuristic and read-only. The extension does **not** select
 an identity action, save rules, or hide content yet.
+
+For LinkedIn, detected ownership and future mute matching are deliberately
+separate. A person defaults to authored posts and their own comments. An
+organization also includes jobs. Mentions, photo tags, social-context activity
+(such as likes), and a profile merely commenting on someone else’s post do not
+make that surrounding post match the muted entity. A matching comment can be
+removed at the comment boundary while leaving the post intact, so following the
+post author does not need to be inferred from fragile feed markup.
 
 TLDR current state: the detection works for Linkedin and Carousell and Youtube and Reddit (around 90%, edge cases to be ironed out later without sacrificing the main working functionality). Etsy listing cards expose a stable numeric `data-shop-id`, which is now captured directly without depending on the displayed shop name. Doesn't work at all yet for Ebay or Pinterest (expected because creator names are not displayed until you click on a specific listing). Instagram is deferred because its native controls cover basic account muting.
 
@@ -55,8 +67,8 @@ python3 -m http.server 4173
 
 Then visit `http://localhost:4173/fixtures/listings.html` and use the **Start
 selector demo** button. The fixture includes semantic `<article>` listings,
-plain repeated `<div>` result rows, a LinkedIn-shaped post with a nested
-comment and social attribution, plus YouTube-shaped video cards with and
+plain repeated `<div>` result rows, LinkedIn-shaped legacy and current-renderer
+posts with nested comments, inline tagged profiles, and social attribution, plus YouTube-shaped video cards with and
 without a detectable channel. It also includes a Carousell username link and a
 multi-column YouTube rich-grid structure, an overlapping multi-identity box,
 and an Etsy card with separate listing and shop IDs.

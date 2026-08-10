@@ -8,6 +8,18 @@
   const MAX_ANCESTORS = 18
   const MIN_IDENTITY_SCORE = 7
   const MAX_IDENTITY_SCOPE_GROWTH = 8
+  const LINKEDIN_POST_UNIT_SELECTOR =
+    '[class*="feed-shared-update" i], [data-urn^="urn:li:activity:"]'
+  const LINKEDIN_COMMENT_UNIT_SELECTOR =
+    '[class*="comments-comment-item" i], [class*="comments-reply-item" i]'
+  const LINKEDIN_CONTENT_UNIT_SELECTOR =
+    `${LINKEDIN_COMMENT_UNIT_SELECTOR}, ${LINKEDIN_POST_UNIT_SELECTOR}`
+  const LINKEDIN_CURRENT_COMMENT_SELECTOR = '[componentkey^="replaceableComment_"]'
+  const LINKEDIN_CURRENT_POST_SELECTOR = '[role="listitem"]'
+  const LINKEDIN_CURRENT_FEED_SELECTOR = '[data-testid="mainFeed"]'
+  const LINKEDIN_TEXT_CONTENT_SELECTOR = '[data-testid="expandable-text-box"]'
+  const LINKEDIN_POST_OWNER_WORDS = /update-components-actor|feed-shared-actor/i
+  const LINKEDIN_COMMENT_OWNER_WORDS = /comments-post-meta|comment-actor/i
   const YOUTUBE_VIDEO_UNIT_SELECTOR = [
     'ytd-video-renderer',
     'ytd-rich-item-renderer',
@@ -176,6 +188,10 @@
             <div>
               <strong class="identity-title">Move over a content box</strong>
               <small class="identity-detail">We’ll look for a linked seller or author.</small>
+              <small class="identity-target-row" hidden>
+                <span class="identity-target-label">Identity target</span>
+                <a class="identity-target-value" target="_blank" rel="noopener noreferrer"></a>
+              </small>
             </div>
           </div>
         </aside>
@@ -200,6 +216,9 @@
       this.identityStateElement = this.shadow.querySelector('.identity-state')
       this.identityTitleElement = this.shadow.querySelector('.identity-title')
       this.identityDetailElement = this.shadow.querySelector('.identity-detail')
+      this.identityTargetRowElement = this.shadow.querySelector('.identity-target-row')
+      this.identityTargetLabelElement = this.shadow.querySelector('.identity-target-label')
+      this.identityTargetValueElement = this.shadow.querySelector('.identity-target-value')
 
       this.shadow.querySelector('.exit-button').addEventListener('click', () => {
         this.stop()
@@ -319,6 +338,28 @@
         .identity-state strong, .identity-state small { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .identity-state strong { color: #273238; font-size: var(--selector-text-lg); font-weight: 750; line-height: 1.35; }
         .identity-state small { margin-top: 2px; color: #727c7e; font-size: var(--selector-text-sm); line-height: 1.35; }
+        .identity-state .identity-target-row {
+          margin-top: 7px; padding-top: 6px; border-top: 1px solid #e9e3d9;
+          overflow: visible; text-overflow: clip; white-space: normal;
+        }
+        .identity-target-label {
+          display: block; margin-bottom: 2px; color: #7a8384;
+          font-size: var(--selector-text-xs); font-weight: 750; line-height: 1.25;
+          letter-spacing: .06em; text-transform: uppercase;
+        }
+        .identity-target-value {
+          display: block; min-width: 0; max-width: 100%; color: #364448;
+          overflow-wrap: anywhere; white-space: normal; word-break: break-word;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          font-size: var(--selector-text-xs); font-weight: 600; line-height: 1.4;
+          text-decoration: none;
+        }
+        .identity-target-value.is-link {
+          color: #176143; text-decoration: underline;
+          text-decoration-color: rgb(23 97 67 / 35%); text-underline-offset: 2px;
+        }
+        .identity-target-value.is-link:hover { color: #0d4d33; text-decoration-color: currentColor; }
+        .identity-target-row[hidden] { display: none; }
         .identity-state[data-status="found"] .identity-icon { color: #176143; background: #dcefe5; }
         .identity-state[data-status="ambiguous"] .identity-icon { color: #a84c34; background: #f8e5de; }
         .identity-state[data-status="ambiguous"] strong {
@@ -607,13 +648,14 @@
       return { status: 'none', reason: 'No linked seller, author, or commenter found', scope: 'current' }
     }
 
-    findIdentityInContainer(container) {
+    findIdentityInContainer(container, acceptsAnchor = null) {
       const anchors = []
       if (container.matches?.('a[href]')) anchors.push(container)
       anchors.push(...container.querySelectorAll('a[href]'))
 
       const grouped = new Map()
       for (const anchor of anchors.slice(0, 80)) {
+        if (acceptsAnchor && !acceptsAnchor(anchor)) continue
         const candidate = this.buildIdentityCandidate(anchor, container)
         if (!candidate || candidate.score < MIN_IDENTITY_SCORE) continue
         const existing = grouped.get(candidate.key)
@@ -645,6 +687,10 @@
 
     findSiteIdentity(target) {
       const route = this.getIdentityRoute(location.href)
+      const linkedInUnit =
+        this.findLinkedInContentUnit(target) || this.findLinkedInContentUnit(this.hoveredElement)
+      if (linkedInUnit) return this.findLinkedInUnitIdentity(linkedInUnit)
+
       const etsyUnit =
         this.findEtsyListingUnit(this.hoveredElement) || this.findEtsyListingUnit(target)
       if (
@@ -721,6 +767,137 @@
       return null
     }
 
+    findLinkedInContentUnit(target) {
+      if (!(target instanceof Element)) return null
+
+      const legacyUnit = target.closest(LINKEDIN_CONTENT_UNIT_SELECTOR)
+      if (legacyUnit) return legacyUnit
+
+      const commentUnit = this.findCurrentLinkedInCommentUnit(target)
+      if (commentUnit) return commentUnit
+
+      const postUnit = target.closest(LINKEDIN_CURRENT_POST_SELECTOR)
+      if (postUnit?.closest(LINKEDIN_CURRENT_FEED_SELECTOR)) return postUnit
+      return null
+    }
+
+    findCurrentLinkedInCommentUnit(target) {
+      const closest = target.closest?.(LINKEDIN_CURRENT_COMMENT_SELECTOR)
+      if (!closest) return null
+
+      const key = closest.getAttribute('componentkey')
+      let unit = closest
+      let current = closest.parentElement
+      while (current && !current.matches(LINKEDIN_CURRENT_POST_SELECTOR)) {
+        if (current.getAttribute('componentkey') === key) unit = current
+        current = current.parentElement
+      }
+      return unit
+    }
+
+    findLinkedInUnitIdentity(unit) {
+      const isComment =
+        unit.matches(LINKEDIN_COMMENT_UNIT_SELECTOR) ||
+        unit.matches(LINKEDIN_CURRENT_COMMENT_SELECTOR)
+      const type = isComment ? 'commenter' : 'author'
+      const ownerAnchors = this.findLinkedInOwnerAnchors(unit, isComment)
+      const result = this.findIdentityInContainer(
+        unit,
+        (anchor) => ownerAnchors.has(anchor)
+      )
+      const scope = isComment ? 'linkedin-comment' : 'linkedin-post'
+
+      if (result.status === 'none') {
+        return {
+          ...result,
+          reason: `No linked ${type} found in this ${isComment ? 'comment' : 'post'}`,
+          scope,
+        }
+      }
+
+      const entityType = result.status === 'found' ? result.type : null
+      const candidates = result.candidates?.map((candidate) => ({
+        ...candidate,
+        entityType: candidate.type,
+        type,
+      }))
+      return {
+        ...result,
+        type,
+        entityType,
+        relationship: isComment ? 'comment-author' : 'post-author',
+        defaultMuteScopes: entityType ? this.getLinkedInDefaultMuteScopes(entityType) : [],
+        candidates,
+        scope,
+        container: unit,
+      }
+    }
+
+    findLinkedInOwnerAnchors(unit, isComment) {
+      const anchors = [...unit.querySelectorAll('a[href]')].filter(
+        (anchor) => this.getIdentityRoute(anchor.href)?.site === 'linkedin'
+      )
+      const semanticAnchors = anchors.filter((anchor) =>
+        this.isLinkedInOwnerAnchor(anchor, unit, isComment)
+      )
+      if (semanticAnchors.length) return new Set(semanticAnchors)
+
+      const grouped = new Map()
+      for (const anchor of anchors) {
+        if (anchor.closest(LINKEDIN_TEXT_CONTENT_SELECTOR)) continue
+
+        const commentUnit = this.findCurrentLinkedInCommentUnit(anchor)
+        if ((isComment && commentUnit !== unit) || (!isComment && commentUnit)) continue
+
+        const route = this.getIdentityRoute(anchor.href)
+        const group = grouped.get(route.href) || { anchors: [], hasAvatar: false }
+        group.anchors.push(anchor)
+        group.hasAvatar ||= Boolean(anchor.querySelector('img,[role="img"]'))
+        grouped.set(route.href, group)
+      }
+
+      const groups = [...grouped.values()]
+      const minimumLinks = isComment ? 2 : 3
+      const strongGroups = groups.filter(
+        (group) => group.hasAvatar && group.anchors.length >= minimumLinks
+      )
+      if (strongGroups.length) {
+        return new Set(strongGroups.flatMap((group) => group.anchors))
+      }
+
+      const avatarGroups = groups
+        .filter((group) => group.hasAvatar)
+        .sort((a, b) => b.anchors.length - a.anchors.length)
+      if (
+        avatarGroups.length === 1 ||
+        (avatarGroups[0] && avatarGroups[0].anchors.length > avatarGroups[1]?.anchors.length)
+      ) {
+        return new Set(avatarGroups[0].anchors)
+      }
+
+      return new Set()
+    }
+
+    getLinkedInDefaultMuteScopes(entityType) {
+      const scopes = ['authored-posts', 'authored-comments']
+      if (entityType === 'organization') scopes.splice(1, 0, 'jobs')
+      return scopes
+    }
+
+    isLinkedInOwnerAnchor(anchor, unit, isComment) {
+      const route = this.getIdentityRoute(anchor.href)
+      if (route?.site !== 'linkedin') return false
+      if (anchor.closest(LINKEDIN_CONTENT_UNIT_SELECTOR) !== unit) return false
+
+      const context = this.getIdentityContext(anchor, unit)
+      if (SECONDARY_ATTRIBUTION_WORDS.test(context)) return false
+
+      const ownerWords = isComment
+        ? LINKEDIN_COMMENT_OWNER_WORDS
+        : LINKEDIN_POST_OWNER_WORDS
+      return ownerWords.test(context)
+    }
+
     isEtsyPage() {
       const host = location.hostname.replace(/^www\./i, '').toLowerCase()
       return host === 'etsy.com' || host.endsWith('.etsy.com')
@@ -746,6 +923,7 @@
         type: 'seller',
         href: null,
         entityId: shopId,
+        entityIdLabel: 'Shop ID',
         shopId,
         score: 30,
       }
@@ -964,6 +1142,7 @@
     renderIdentity(result) {
       const state = result?.status || 'none'
       this.identityStateElement.dataset.status = state
+      this.renderIdentityTarget(state === 'found' ? result : null)
 
       if (state === 'found') {
         const typeLabel = result.type[0].toUpperCase() + result.type.slice(1)
@@ -973,6 +1152,8 @@
           'video-unit': 'linked in this video box',
           'page-context': 'linked beside this content',
           'page-header': 'identified from this profile page',
+          'linkedin-post': 'posted this LinkedIn post',
+          'linkedin-comment': 'wrote this LinkedIn comment',
         }
         const source = sources[result.scope] || 'linked in this box'
         this.identityStateElement.querySelector('.identity-icon').textContent = '✓'
@@ -998,6 +1179,41 @@
       this.identityStateElement.querySelector('.identity-icon').textContent = '—'
       this.identityTitleElement.textContent = 'No linked person found'
       this.identityDetailElement.textContent = result.reason || 'Try a nearby or larger content box'
+    }
+
+    renderIdentityTarget(result) {
+      const target = this.getIdentityTarget(result)
+      this.identityTargetRowElement.hidden = !target
+      this.identityTargetLabelElement.textContent = target?.label || ''
+      this.identityTargetValueElement.textContent = target?.value || ''
+      this.identityTargetValueElement.title = target?.value || ''
+      this.identityTargetValueElement.classList.toggle('is-link', Boolean(target?.href))
+
+      if (target?.href) {
+        this.identityTargetValueElement.href = target.href
+      } else {
+        this.identityTargetValueElement.removeAttribute('href')
+      }
+    }
+
+    getIdentityTarget(result) {
+      if (!result) return null
+
+      try {
+        const url = new URL(result.href)
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          return { label: 'Profile link', value: url.href, href: url.href }
+        }
+      } catch {
+        // Fall through to a stable identifier when this identity has no URL.
+      }
+
+      const entityId = String(result.entityId ?? '').trim()
+      if (!entityId) return null
+      return {
+        label: result.entityIdLabel || 'Identity ID',
+        value: entityId,
+      }
     }
 
     positionBox(target) {

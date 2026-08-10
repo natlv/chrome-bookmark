@@ -57,6 +57,7 @@
       .actor, .channel-name { color: #bd4c35; font-size: 12px; font-weight: 800; text-decoration: none; }
       .social-context { padding: 11px 18px; border-bottom: 1px solid #ebe5da; color: #727c7e; font-size: 12px; }
       .social-context a { color: #4d5e64; font-weight: 750; }
+      .linkedin-avatar { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; vertical-align: middle; }
       .embedded-comment { margin: 15px 18px 18px; padding: 13px; border: 1px solid #e1dbd0; border-radius: 12px; background: #f8f5ef; }
       .embedded-comment p { margin: 6px 0 0; color: #697477; font-size: 12px; }
       @media (max-width: 780px) { .product-grid { grid-template-columns: 1fr; } }
@@ -128,13 +129,49 @@
                 <a class="update-components-actor__meta-link actor" href="https://www.linkedin.com/in/jane-doe/">Jane Doe</a>
               </div>
               <h3>A post with a nested comment</h3>
-              <p>The post should resolve to Jane even though another profile is linked in its comment.</p>
+              <p>
+                The post should resolve to Jane even though
+                <a class="app-aware-link" href="https://www.linkedin.com/in/priya-rao/">Priya Rao</a>
+                is tagged in its content and another profile is linked in its comment.
+              </p>
             </div>
             <article class="comments-comment-item embedded-comment">
               <a class="comments-post-meta__actor-link actor" href="https://www.linkedin.com/in/alex-kim/">Alex Kim</a>
               <p>The comment itself should resolve to Alex.</p>
             </article>
           </article>
+
+          <div class="platform-card" data-testid="mainFeed">
+            <article role="listitem">
+              <div class="social-context">
+                <a href="https://www.linkedin.com/in/modern-reactor/"><img class="linkedin-avatar" alt="Modern Reactor" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23d7e4e2'/%3E%3C/svg%3E" /></a>
+                <a href="https://www.linkedin.com/in/modern-reactor/">Modern Reactor</a>
+                likes this
+              </div>
+              <div class="platform-copy">
+                <div>
+                  <a href="https://www.linkedin.com/company/modern-studio/"><img class="linkedin-avatar" alt="Modern Studio" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23bdd8d6'/%3E%3C/svg%3E" /></a>
+                  <a href="https://www.linkedin.com/company/modern-studio/">Modern Studio</a>
+                  <a href="https://www.linkedin.com/company/modern-studio/">Company profile</a>
+                </div>
+                <h3>A current LinkedIn-renderer post</h3>
+                <p data-testid="expandable-text-box">
+                  Modern Studio owns this post while
+                  <a href="https://www.linkedin.com/in/modern-tagged/">Modern Tagged</a>
+                  is only mentioned in its text.
+                </p>
+              </div>
+              <article class="embedded-comment" componentkey="replaceableComment_fixture">
+                <div componentkey="replaceableComment_fixture">
+                  <div componentkey="replaceableComment_fixture">
+                    <a href="https://www.linkedin.com/in/modern-commenter/"><img class="linkedin-avatar" alt="Modern Commenter" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23e8d8ca'/%3E%3C/svg%3E" /></a>
+                    <a href="https://www.linkedin.com/in/modern-commenter/">Modern Commenter</a>
+                    <p data-testid="expandable-text-box">This comment has a separate owner.</p>
+                  </div>
+                </div>
+              </article>
+            </article>
+          </div>
 
           <ytd-video-renderer class="platform-card">
             <div class="platform-media" aria-label="Video thumbnail">▶</div>
