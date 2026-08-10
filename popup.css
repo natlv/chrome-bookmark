@@ -74,10 +74,94 @@ h1 {
 }
 
 .intro {
-  margin: 18px 0;
+  margin: 16px 0;
   color: #536064;
   font-size: 13px;
   line-height: 1.55;
+}
+
+.extension-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 13px 14px;
+  border: 1px solid #dcd6cb;
+  border-radius: 15px;
+  background: rgb(255 255 255 / 58%);
+}
+
+.control-copy {
+  min-width: 0;
+}
+
+.control-copy strong,
+.control-copy small {
+  display: block;
+}
+
+.control-copy strong {
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.control-copy small {
+  margin-top: 3px;
+  color: #607073;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.switch-track {
+  display: block;
+  width: 44px;
+  height: 25px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #aeb7b6;
+  transition: background 140ms ease;
+}
+
+.switch-track span {
+  display: block;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #fffdf9;
+  box-shadow: 0 2px 6px rgb(22 34 38 / 22%);
+  transition: transform 140ms ease;
+}
+
+.switch input:checked + .switch-track {
+  background: #287456;
+}
+
+.switch input:checked + .switch-track span {
+  transform: translateX(19px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 3px solid rgb(240 106 75 / 32%);
+  outline-offset: 3px;
+}
+
+.switch input:disabled + .switch-track {
+  opacity: 0.62;
+  cursor: wait;
 }
 
 .primary-action {
@@ -202,6 +286,155 @@ kbd {
 }
 
 .status:empty {
+  display: none;
+}
+
+.muted-section {
+  margin-top: 17px;
+  padding-top: 16px;
+  border-top: 1px solid #ddd7cc;
+}
+
+.muted-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-label {
+  margin: 0 0 2px;
+  color: #7a8384;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.muted-section h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.count-pill {
+  display: grid;
+  min-width: 25px;
+  height: 25px;
+  padding: 0 7px;
+  place-items: center;
+  border-radius: 999px;
+  color: #4f5d60;
+  background: #e6e2da;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.site-name {
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: #8a9293;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.muted-list {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.muted-profile {
+  display: grid;
+  grid-template-columns: 31px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #e0dad0;
+  border-radius: 12px;
+  background: rgb(255 253 249 / 65%);
+}
+
+.profile-icon {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 9px;
+  color: #176143;
+  background: #dcefe5;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.profile-copy {
+  min-width: 0;
+}
+
+.profile-copy strong,
+.profile-copy small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-copy strong {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.profile-copy small {
+  margin-top: 1px;
+  color: #7a8384;
+  font-size: 9px;
+  line-height: 1.3;
+  text-transform: capitalize;
+}
+
+.remove-profile {
+  padding: 6px 7px;
+  border: 1px solid #ddd3c9;
+  border-radius: 8px;
+  color: #9a422f;
+  background: #fffaf6;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.remove-profile:hover {
+  border-color: #e1aa9d;
+  background: #fff5f0;
+}
+
+.remove-profile:focus-visible {
+  outline: 3px solid rgb(240 106 75 / 25%);
+  outline-offset: 2px;
+}
+
+.remove-profile:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.empty-state {
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px dashed #d9d3c8;
+  border-radius: 12px;
+  color: #7a8384;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.empty-state[hidden] {
   display: none;
 }
 

@@ -3,6 +3,11 @@
   globalThis.__muteByEntitySelectorInstalled = true
 
   const UI_TAG = 'mute-by-entity-selector-ui'
+  const HIDDEN_ATTRIBUTE = 'data-mute-by-entity-hidden'
+  const HIDDEN_STYLE_ID = 'mute-by-entity-hidden-style'
+  const ENABLED_STORAGE_KEY = 'muteByEntityEnabled'
+  const MUTED_STORAGE_PREFIX = 'muteByEntityMuted:'
+  const LOCAL_STORAGE_PREFIX = '__muteByEntity:'
   const MIN_WIDTH = 150
   const MIN_HEIGHT = 64
   const MAX_ANCESTORS = 18
@@ -56,6 +61,8 @@
     'ytd-playlist-video-renderer',
     'ytd-reel-item-renderer',
     'yt-lockup-view-model',
+    '#movie_player',
+    'ytd-player',
     'ytd-comment-thread-renderer',
     'ytd-comment-view-model',
   ].join(',')
@@ -82,6 +89,8 @@
     'ytd-playlist-video-renderer',
     'ytd-reel-item-renderer',
     'yt-lockup-view-model',
+    '#movie_player',
+    'ytd-player',
     'ytd-comment-thread-renderer',
     'ytd-comment-view-model',
   ].join(',')
@@ -93,6 +102,110 @@
     /update-components-header|social-activity|social-proof|relevance-context|feed-shared-header/i
   const NON_IDENTITY_WORDS =
     /product|listing-title|post-title|article-title|comment-link|category|topic|tag|search|share|reply|like|login|sign-?up/i
+
+  function getSiteKey(href = location.href) {
+    try {
+      return new URL(href).hostname.replace(/^www\./i, '').toLowerCase()
+    } catch {
+      return location.hostname.replace(/^www\./i, '').toLowerCase()
+    }
+  }
+
+  function getMutedStorageKey(siteKey) {
+    return `${MUTED_STORAGE_PREFIX}${siteKey}`
+  }
+
+  class ExtensionStateStore {
+    async get(keys) {
+      if (globalThis.chrome?.storage?.local) {
+        const result = await chrome.storage.local.get(keys)
+        const fallback = this.getFallback(keys)
+        const migrated = {}
+
+        for (const key of keys) {
+          const fallbackValue = fallback[key]
+          if (fallbackValue === undefined) continue
+
+          if (
+            key.startsWith(MUTED_STORAGE_PREFIX) &&
+            Array.isArray(result[key]) &&
+            Array.isArray(fallbackValue)
+          ) {
+            const profiles = new Map()
+            for (const profile of [...fallbackValue, ...result[key]]) {
+              if (profile?.key) profiles.set(profile.key, profile)
+            }
+            result[key] = [...profiles.values()]
+            migrated[key] = result[key]
+          } else if (result[key] === undefined) {
+            result[key] = fallbackValue
+            migrated[key] = fallbackValue
+          }
+        }
+
+        if (Object.keys(migrated).length) {
+          await chrome.storage.local.set(migrated)
+          this.removeFallback(Object.keys(migrated))
+        }
+        return result
+      }
+
+      if (globalThis.chrome?.runtime?.id) {
+        throw new Error('Extension storage is unavailable')
+      }
+
+      return this.getFallback(keys)
+    }
+
+    getFallback(keys) {
+      const result = {}
+      for (const key of keys) {
+        try {
+          const value = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}${key}`)
+          if (value !== null) result[key] = JSON.parse(value)
+        } catch {
+          // Keep the fixture usable when page storage is unavailable.
+        }
+      }
+      return result
+    }
+
+    removeFallback(keys) {
+      for (const key of keys) {
+        try {
+          localStorage.removeItem(`${LOCAL_STORAGE_PREFIX}${key}`)
+        } catch {
+          // A successful extension-storage migration is enough if page storage is locked.
+        }
+      }
+    }
+
+    async set(values) {
+      if (globalThis.chrome?.storage?.local) {
+        await chrome.storage.local.set(values)
+        return
+      }
+
+      if (globalThis.chrome?.runtime?.id) {
+        throw new Error('Extension storage is unavailable')
+      }
+
+      for (const [key, value] of Object.entries(values)) {
+        try {
+          localStorage.setItem(`${LOCAL_STORAGE_PREFIX}${key}`, JSON.stringify(value))
+        } catch {
+          // Muting remains active for this page even if fixture storage is unavailable.
+        }
+      }
+    }
+
+    onChanged(listener) {
+      if (!globalThis.chrome?.storage?.onChanged) return
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName === 'local') listener(changes)
+      })
+    }
+  }
 
   class ContainerSelector {
     constructor() {
@@ -195,13 +308,13 @@
             </div>
           </div>
         </aside>
-        <section class="confirmation selector-type selector-panel" role="dialog" aria-label="Confirm selected content box">
-          <p class="confirmation-kicker">Container selected</p>
-          <h2>Use this box?</h2>
-          <p class="confirmation-copy">This only confirms the UI boundary. Nothing will be muted or saved yet.</p>
+        <section class="confirmation selector-type selector-panel" role="dialog" aria-label="Confirm muted profile">
+          <p class="confirmation-kicker">Profile detected</p>
+          <h2>Mute this profile?</h2>
+          <p class="confirmation-copy">Matching content from this profile will be hidden on this site.</p>
           <div class="confirmation-actions">
             <button class="secondary" type="button">Keep looking</button>
-            <button class="primary" type="button">Select box</button>
+            <button class="primary" type="button">Mute profile</button>
           </div>
         </section>
         <div class="toast selector-type" role="status" aria-live="polite"></div>
@@ -228,16 +341,29 @@
         this.locked = false
         this.hideConfirmation()
       })
-      this.shadow.querySelector('.primary').addEventListener('click', () => {
-        const { container: _container, ...identity } = this.identityResult || {}
-        const selected = {
-          ...this.describeTarget(this.target),
-          identity,
+      this.shadow.querySelector('.primary').addEventListener('click', async (event) => {
+        if (this.identityResult?.status !== 'found') return
+
+        const button = event.currentTarget
+        button.disabled = true
+        const { container: _container, ...identity } = this.identityResult
+        const selected = { ...this.describeTarget(this.target), identity }
+
+        try {
+          const { added } = await mutingEngine.addIdentity(identity)
+          globalThis.dispatchEvent(
+            new CustomEvent('mute-by-entity:profile-muted', { detail: selected })
+          )
+          this.stop(added ? `${identity.label} muted on this site` : `${identity.label} is already muted`)
+        } catch (error) {
+          button.disabled = false
+          const message = error instanceof Error ? error.message : String(error)
+          this.showToast(
+            message.includes('storage is unavailable')
+              ? 'Reload the extension, refresh this tab, then try again'
+              : 'Could not save this muted profile'
+          )
         }
-        globalThis.dispatchEvent(
-          new CustomEvent('mute-by-entity:container-selected', { detail: selected })
-        )
-        this.stop('Box selected — ready for the next milestone')
       })
     }
 
@@ -373,13 +499,14 @@
         .confirmation.is-visible { display: block; animation: arrive 150ms ease-out; }
         @keyframes arrive { from { opacity: 0; transform: translateY(5px) scale(.985); } }
         .confirmation-kicker { margin: 0 0 4px; color: #c65338; font-size: var(--selector-text-xs); font-weight: 750; line-height: 1.2; letter-spacing: .1em; text-transform: uppercase; }
-        .confirmation h2 { margin: 0; color: #1e292e; font-size: 18px; font-weight: 750; line-height: 1.25; letter-spacing: -.02em; }
+        .confirmation h2 { margin: 0; overflow-wrap: anywhere; color: #1e292e; font-size: 18px; font-weight: 750; line-height: 1.25; letter-spacing: -.02em; }
         .confirmation-copy { margin: 7px 0 15px; overflow-wrap: anywhere; color: #647073; font-size: var(--selector-text-md); line-height: 1.5; }
         .confirmation-actions { display: flex; justify-content: flex-end; gap: 8px; }
         button { padding: 8px 11px; border-radius: 9px; cursor: pointer; font-size: var(--selector-text-sm); font-weight: 700; line-height: 1; }
         button:focus-visible { outline: 3px solid rgb(240 106 75 / 25%); outline-offset: 2px; }
         button.secondary { border: 1px solid #d8d3ca; color: #596467; background: #fffdf9; }
         button.primary { border: 1px solid #202c32; color: #fffdf9; background: #202c32; }
+        button:disabled { opacity: .5; cursor: not-allowed; }
         button:hover { filter: brightness(.97); }
         .toast {
           position: fixed; z-index: 2147483647; left: 50%; bottom: 24px; display: none;
@@ -678,6 +805,7 @@
 
       return {
         status: 'found',
+        key: top.key,
         label: top.label,
         type: top.type,
         href: top.href,
@@ -765,6 +893,24 @@
       }
 
       return null
+    }
+
+    findIdentityForMuteUnit(unit) {
+      if (!(unit instanceof Element)) return { status: 'none' }
+
+      const previousHoveredElement = this.hoveredElement
+      this.hoveredElement = null
+      try {
+        const siteResult = this.findSiteIdentity(unit)
+        if (siteResult) return siteResult
+      } finally {
+        this.hoveredElement = previousHoveredElement
+      }
+
+      const result = this.findIdentityInContainer(unit)
+      return result.status === 'none'
+        ? result
+        : { ...result, scope: 'current', container: unit }
     }
 
     findLinkedInContentUnit(target) {
@@ -950,6 +1096,7 @@
 
       return {
         status: 'found',
+        key: this.normalizeIdentityKey(route.href, label),
         label,
         type: route.type,
         href: route.href,
@@ -1121,7 +1268,6 @@
     normalizeIdentityKey(href, label) {
       try {
         const url = new URL(href, location.href)
-        url.hash = ''
         if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/$/, '')
         return url.href
       } catch {
@@ -1248,6 +1394,27 @@
     }
 
     showConfirmation() {
+      const result = this.identityResult
+      const kicker = this.confirmationElement.querySelector('.confirmation-kicker')
+      const heading = this.confirmationElement.querySelector('h2')
+      const copy = this.confirmationElement.querySelector('.confirmation-copy')
+      const primary = this.confirmationElement.querySelector('.primary')
+
+      primary.disabled = result?.status !== 'found'
+      if (result?.status === 'found') {
+        kicker.textContent = 'Profile detected'
+        heading.textContent = `Mute ${result.label}?`
+        copy.textContent = 'Matching content from this profile will be hidden on this site.'
+        primary.textContent = 'Mute profile'
+      } else {
+        kicker.textContent = 'Identity needed'
+        heading.textContent = result?.status === 'ambiguous' ? 'Choose a clearer box' : 'No profile detected'
+        copy.textContent = result?.status === 'ambiguous'
+          ? 'This box contains multiple possible profiles, so it cannot be muted safely.'
+          : 'Try a nearby box that contains a linked seller, author, creator, or commenter.'
+        primary.textContent = 'Mute profile'
+      }
+
       const rect = this.target.getBoundingClientRect()
       const panelWidth = 330
       const panelHeight = 174
@@ -1259,7 +1426,10 @@
 
       Object.assign(this.confirmationElement.style, { left: `${left}px`, top: `${top}px` })
       this.confirmationElement.classList.add('is-visible')
-      this.confirmationElement.querySelector('.primary').focus()
+      const focusTarget = primary.disabled
+        ? this.confirmationElement.querySelector('.secondary')
+        : primary
+      focusTarget.focus()
     }
 
     hideConfirmation() {
@@ -1276,8 +1446,151 @@
     }
   }
 
+  class MutingEngine {
+    constructor(controller, store) {
+      this.controller = controller
+      this.store = store
+      this.siteKey = getSiteKey()
+      this.mutedStorageKey = getMutedStorageKey(this.siteKey)
+      this.enabled = true
+      this.profiles = []
+      this.scanTimer = 0
+      this.observer = null
+      this.ready = Promise.resolve()
+    }
+
+    async init() {
+      let state = {}
+      try {
+        state = await this.store.get([ENABLED_STORAGE_KEY, this.mutedStorageKey])
+      } catch {
+        // Default to enabled with an empty site set if extension storage is unavailable.
+      }
+      this.enabled = state[ENABLED_STORAGE_KEY] !== false
+      this.profiles = Array.isArray(state[this.mutedStorageKey])
+        ? state[this.mutedStorageKey]
+        : []
+
+      this.ensureHiddenStyle()
+      this.store.onChanged((changes) => this.handleStorageChange(changes))
+      this.observer = new MutationObserver((mutations) => {
+        if (!this.enabled || !this.profiles.length) return
+        if (mutations.some((mutation) => mutation.addedNodes.length)) this.scheduleScan()
+      })
+      this.observer.observe(document.documentElement, { childList: true, subtree: true })
+      this.applyState()
+    }
+
+    ensureHiddenStyle() {
+      if (document.getElementById(HIDDEN_STYLE_ID)) return
+      const style = document.createElement('style')
+      style.id = HIDDEN_STYLE_ID
+      style.textContent = `[${HIDDEN_ATTRIBUTE}] { display: none !important; }`
+      const styleParent = document.head || document.documentElement
+      styleParent.append(style)
+    }
+
+    async addIdentity(identity) {
+      await this.ready
+      const key = this.getIdentityKey(identity)
+      if (!key) throw new Error('Identity has no stable key')
+
+      const existing = this.profiles.some((profile) => profile.key === key)
+      if (existing) {
+        this.applyState()
+        return { added: false }
+      }
+
+      const profile = {
+        key,
+        label: String(identity.label || 'Unknown profile').slice(0, 90),
+        type: String(identity.entityType || identity.type || 'person').slice(0, 32),
+        href: identity.href || null,
+        entityId: identity.entityId || null,
+        mutedAt: new Date().toISOString(),
+      }
+      this.profiles = [...this.profiles, profile]
+      await this.store.set({ [this.mutedStorageKey]: this.profiles })
+      this.applyState()
+      return { added: true, profile }
+    }
+
+    async setEnabled(enabled) {
+      await this.ready
+      this.enabled = Boolean(enabled)
+      await this.store.set({ [ENABLED_STORAGE_KEY]: this.enabled })
+      this.applyState()
+    }
+
+    getIdentityKey(identity) {
+      if (identity?.key) return identity.key
+      if (identity?.href) {
+        return this.controller.normalizeIdentityKey(identity.href, identity.label || '')
+      }
+      const entityId = String(identity?.entityId ?? '').trim()
+      return entityId ? `${this.siteKey}:${identity.type || 'entity'}:${entityId}` : ''
+    }
+
+    handleStorageChange(changes) {
+      let changed = false
+      if (changes[ENABLED_STORAGE_KEY]) {
+        this.enabled = changes[ENABLED_STORAGE_KEY].newValue !== false
+        changed = true
+      }
+      if (changes[this.mutedStorageKey]) {
+        const nextProfiles = changes[this.mutedStorageKey].newValue
+        this.profiles = Array.isArray(nextProfiles) ? nextProfiles : []
+        changed = true
+      }
+      if (changed) this.applyState()
+    }
+
+    applyState() {
+      clearTimeout(this.scanTimer)
+      this.scanTimer = 0
+      if (!this.enabled || !this.profiles.length) {
+        this.revealAll()
+        return
+      }
+      this.scan()
+    }
+
+    scheduleScan() {
+      if (this.scanTimer) return
+      this.scanTimer = setTimeout(() => {
+        this.scanTimer = 0
+        this.scan()
+      }, 120)
+    }
+
+    scan() {
+      if (!this.enabled || !this.profiles.length) return
+
+      const mutedKeys = new Set(this.profiles.map((profile) => profile.key))
+      const units = [...document.querySelectorAll(CONTENT_UNIT_SELECTOR)]
+      for (const unit of units) {
+        if (!(unit instanceof HTMLElement) || unit.closest(`#${UI_TAG}`)) continue
+        const result = this.controller.findIdentityForMuteUnit(unit)
+        const key = result.status === 'found' ? this.getIdentityKey(result) : ''
+        const target = result.container instanceof HTMLElement ? result.container : unit
+        if (target !== unit) unit.removeAttribute(HIDDEN_ATTRIBUTE)
+        target.toggleAttribute(HIDDEN_ATTRIBUTE, Boolean(key && mutedKeys.has(key)))
+      }
+    }
+
+    revealAll() {
+      for (const unit of document.querySelectorAll(`[${HIDDEN_ATTRIBUTE}]`)) {
+        unit.removeAttribute(HIDDEN_ATTRIBUTE)
+      }
+    }
+  }
+
+  const stateStore = new ExtensionStateStore()
   const controller = new ContainerSelector()
+  const mutingEngine = new MutingEngine(controller, stateStore)
   globalThis.__muteByEntitySelector = controller
+  globalThis.__muteByEntityMuting = mutingEngine
+  mutingEngine.ready = mutingEngine.init()
 
   if (globalThis.chrome?.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

@@ -1,15 +1,19 @@
 # Mute by Entity
 
-An early Chrome extension prototype for selecting the content container around a
-listing, post, or result. This repository intentionally does not use UTags code
-or dependencies.
+A privacy-limited Chrome extension that mutes profiles per site and hides
+content they create. This repository intentionally does not use UTags code or
+dependencies.
 
-## Milestone 1
+## Current milestone
 
-The extension currently provides the interaction foundation only:
+The extension currently provides:
 
-- A privacy-limited Manifest V3 extension using `activeTab` and `scripting`
-- A popup that starts selection mode on demand
+- A Manifest V3 extension using `activeTab`, `scripting`, and local extension storage
+- Automatic page-local filtering on normal HTTP(S) pages, with no network calls
+- A global on/off switch that is independent from profile detection
+- Per-hostname muted profile sets stored only on the current device
+- A popup that starts profile detection on demand and lists profiles muted for the current site
+- One-click unmuting from the popup
 - Isolated hover and confirmation UI rendered in a Shadow DOM
 - Semantic and repeated-sibling container scoring
 - Arrow-key adjustment between nested candidate boxes
@@ -30,10 +34,13 @@ The extension currently provides the interaction foundation only:
   identity clusters rather than unstable generated class names
 - Ambiguity detection when a box has competing identities
 - An always-visible **Exit** button in addition to Escape
-- Escape-to-cancel and a non-destructive confirmation step
+- Escape-to-cancel and an explicit mute confirmation step
+- Automatic rescanning as dynamically loaded feed items are added
+- Exact restoration of hidden content when filtering is switched off or a profile is unmuted
 
-Identity detection is heuristic and read-only. The extension does **not** select
-an identity action, save rules, or hide content yet.
+Identity detection remains heuristic. A profile is saved only after the user
+selects a content box with one confidently detected identity and confirms the
+mute. Ambiguous boxes cannot be muted.
 
 For LinkedIn, detected ownership and future mute matching are deliberately
 separate. A person defaults to authored posts and their own comments. An
@@ -51,7 +58,14 @@ TLDR current state: the detection works for Linkedin and Carousell and Youtube a
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select this directory.
 4. Open a normal webpage and press the extension icon.
-5. Choose **Start selecting**.
+5. Choose **Detect new profile**, point at a content box, and confirm the detected profile.
+
+Use **Automatic muting** in the popup to pause or resume all filtering without
+removing saved profiles. The muted list is scoped to the current hostname.
+
+After updating the unpacked extension, use **Reload** on `chrome://extensions`
+and refresh existing website tabs. Chrome does not activate new manifest
+permissions, including local storage, until the extension is reloaded.
 
 Use the up/down arrow keys if a page has nested candidate containers. Press
 Escape to cancel.
@@ -71,7 +85,9 @@ plain repeated `<div>` result rows, LinkedIn-shaped legacy and current-renderer
 posts with nested comments, inline tagged profiles, and social attribution, plus YouTube-shaped video cards with and
 without a detectable channel. It also includes a Carousell username link and a
 multi-column YouTube rich-grid structure, an overlapping multi-identity box,
-and an Etsy card with separate listing and shop IDs.
+and an Etsy card with separate listing and shop IDs. Use **Add live ACME
+listing** after muting ACME Audio to verify that dynamically inserted matching
+content is hidden automatically.
 
 ## Structure
 
@@ -80,6 +96,6 @@ and an Etsy card with separate listing and shop IDs.
 - `content.js` — page-local container-selection controller and isolated UI
 - `fixtures/listings.html` — deterministic visual test page
 
-The controller emits a `mute-by-entity:container-selected` event with a small,
-non-persistent description of the chosen box. A later milestone can replace
-that boundary with inferred entity and rule data without redesigning the UI.
+The controller emits a `mute-by-entity:profile-muted` event after a profile has
+been persisted. Muted profile data contains only the detected identity key,
+label, type, optional profile link or stable entity ID, and the time it was muted.
