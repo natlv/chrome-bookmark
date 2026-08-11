@@ -9,51 +9,41 @@
   <body>
     <main class="popup-shell">
       <header class="brand-row">
-        <div class="brand-mark" aria-hidden="true">
-          <span></span>
-          <span></span>
-        </div>
+        <img class="brand-mark" src="icon.png" alt="" />
         <div>
           <p class="eyebrow">Mute Anyone</p>
           <h1>Control your feed</h1>
         </div>
       </header>
 
-      <section class="extension-control" aria-labelledby="filtering-title">
-        <div class="control-copy">
-          <strong id="filtering-title">Automatic filtering</strong>
-          <small id="filtering-status">Loading preference…</small>
-        </div>
-        <label class="switch">
-          <input id="extension-enabled" type="checkbox" aria-labelledby="filtering-title" />
-          <span class="switch-track" aria-hidden="true"><span></span></span>
-        </label>
-      </section>
-
-      <p class="intro">Detect a creator on the current page and add it to this site’s muted set.</p>
-
-      <button id="start-selection" class="primary-action" type="button">
-        <span class="action-icon" aria-hidden="true"></span>
-        <span>
-          <strong>Detect new profile</strong>
-          <small>Point to a post, video, comment, or listing</small>
-        </span>
-        <span class="arrow" aria-hidden="true">→</span>
+      <button id="extension-enabled" class="filtering-button" type="button" data-enabled="true">
+        <span class="filtering-icon" aria-hidden="true"></span>
+        <span class="filtering-label">Pause on this site</span>
       </button>
 
-      <div class="shortcut-card" aria-label="Selection controls">
-        <div><kbd>Esc</kbd><span>Cancel</span></div>
-      </div>
-
       <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <section class="muted-section" aria-labelledby="muted-heading">
+        <div class="muted-heading-row">
+          <div>
+            <h2 id="muted-heading">Muted profiles</h2>
+            <p id="muted-summary" class="muted-summary">0 profiles muted on this site</p>
+          </div>
+          <button id="start-selection" class="find-profile-button" type="button">Find a profile to mute</button>
+        </div>
+        <ul id="muted-list" class="muted-list"></ul>
+        <p id="muted-empty" class="empty-state">No profiles muted on this site.</p>
+        <button id="open-settings" class="settings-link" type="button">
+          <span>Manage all sites</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </section>
 
       <section class="keyword-section" aria-labelledby="keyword-heading">
         <div class="muted-heading-row">
           <div>
-            <p class="section-label">Current site</p>
             <h2 id="keyword-heading">Blocked keywords</h2>
           </div>
-          <span id="keyword-count" class="count-pill">0</span>
         </div>
         <form id="keyword-form" class="keyword-form">
           <input
@@ -69,28 +59,6 @@
         <ul id="keyword-list" class="keyword-list"></ul>
         <p id="keyword-empty" class="empty-state">No keywords blocked on this site.</p>
       </section>
-
-      <section class="muted-section" aria-labelledby="muted-heading">
-        <div class="muted-heading-row">
-          <div>
-            <p class="section-label">Current site</p>
-            <h2 id="muted-heading">Muted profiles</h2>
-          </div>
-          <span id="muted-count" class="count-pill">0</span>
-        </div>
-        <p id="site-name" class="site-name"></p>
-        <ul id="muted-list" class="muted-list"></ul>
-        <p id="muted-empty" class="empty-state">No profiles muted on this site.</p>
-        <button id="open-settings" class="settings-link" type="button">
-          <span>Manage all sites</span>
-          <span aria-hidden="true">→</span>
-        </button>
-      </section>
-
-      <footer>
-        <span class="privacy-dot" aria-hidden="true"></span>
-        Filters stay on this device
-      </footer>
     </main>
     <script src="popup.js"></script>
   </body>

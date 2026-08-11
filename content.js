@@ -251,10 +251,9 @@
           <div class="box-label"></div>
         </div>
         <div class="help selector-type" role="status">
-          <span class="live-dot"></span>
-          <strong>Choose a content box</strong>
-          <span>Move over a listing or post</span>
-          <span class="keys"><kbd>Esc</kbd><span class="key-label">exit</span></span>
+          <span>Press</span>
+          <kbd>Esc</kbd>
+          <span>or the Exit button to stop scanning</span>
         </div>
         <aside class="identity-panel selector-type selector-panel" aria-live="polite">
           <div class="identity-header">
@@ -389,24 +388,21 @@
           letter-spacing: .01em;
         }
         .help {
-          position: fixed; z-index: 2147483647; left: 50%; bottom: 22px;
-          display: flex; align-items: center; gap: 9px; max-width: calc(100vw - 32px);
-          overflow: hidden;
-          padding: 10px 13px; border: 1px solid rgb(255 255 255 / 65%); border-radius: 13px;
+          position: fixed; z-index: 2147483647; top: 16px; left: 50%;
+          display: flex; align-items: center; justify-content: center; gap: 6px;
+          width: min(460px, calc(100vw - 32px)); min-width: 0;
+          padding: 11px 18px; border: 1px solid rgb(255 255 255 / 65%); border-radius: 999px;
           opacity: 0; color: #edf1ef; background: rgb(32 44 50 / 96%);
           box-shadow: 0 14px 38px rgb(20 31 36 / 28%); pointer-events: none;
-          transform: translate(-50%, 12px); transition: opacity 160ms ease, transform 160ms ease;
+          transform: translate(-50%, -12px); transition: opacity 160ms ease, transform 160ms ease;
           line-height: 1.3;
           backdrop-filter: blur(12px);
         }
         .help.is-visible { opacity: 1; transform: translate(-50%, 0); }
-        .help strong { white-space: nowrap; }
-        .help > span:not(.live-dot):not(.keys) { color: #b9c1c0; white-space: nowrap; }
-        .live-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #f06a4b; box-shadow: 0 0 0 4px rgb(240 106 75 / 17%); }
-        .keys { display: flex; align-items: center; gap: 4px; margin-left: 4px; color: #b9c1c0; white-space: nowrap; }
+        .help > span { min-width: 0; color: #d7dddb; overflow-wrap: anywhere; }
         kbd { min-width: 21px; padding: 2px 5px; border: 1px solid #667176; border-bottom-width: 2px; border-radius: 5px; color: #f8faf7; text-align: center; font-size: var(--selector-text-xs); font-weight: 700; line-height: 1.2; background: #35434a; }
         .identity-panel {
-          position: fixed; z-index: 2147483647; top: 16px; right: 16px; width: min(310px, calc(100vw - 32px));
+          position: fixed; z-index: 2147483647; top: 68px; right: 16px; width: min(310px, calc(100vw - 32px));
           overflow: hidden; border-radius: 15px; pointer-events: auto;
           backdrop-filter: blur(14px);
         }
@@ -482,12 +478,8 @@
         .toast.is-visible { display: block; animation: toast-in 170ms ease-out; }
         @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
         @media (max-width: 680px) {
-          .help > span:not(.live-dot):not(.keys) { display: none; }
-          .keys { margin-left: 0; }
-          .identity-panel { top: 10px; right: 10px; width: min(290px, calc(100vw - 20px)); }
-        }
-        @media (max-width: 400px) {
-          .key-label { display: none; }
+          .help { top: 10px; width: calc(100vw - 20px); padding-inline: 14px; }
+          .identity-panel { top: 62px; right: 10px; width: min(290px, calc(100vw - 20px)); }
         }
       `
     }
@@ -518,7 +510,6 @@
 
       if (!this.target || this.locked) return
       this.locked = true
-      this.helpElement.classList.remove('is-visible')
       this.showConfirmation()
     }
 

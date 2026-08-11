@@ -1,16 +1,14 @@
 const startButton = document.querySelector('#start-selection')
 const statusElement = document.querySelector('#status')
-const enabledInput = document.querySelector('#extension-enabled')
-const filteringStatus = document.querySelector('#filtering-status')
+const enabledButton = document.querySelector('#extension-enabled')
+const filteringLabel = enabledButton.querySelector('.filtering-label')
 const mutedList = document.querySelector('#muted-list')
-const mutedCount = document.querySelector('#muted-count')
+const mutedSummary = document.querySelector('#muted-summary')
 const mutedEmpty = document.querySelector('#muted-empty')
-const siteName = document.querySelector('#site-name')
 const openSettingsButton = document.querySelector('#open-settings')
 const keywordForm = document.querySelector('#keyword-form')
 const keywordInput = document.querySelector('#keyword-input')
 const keywordList = document.querySelector('#keyword-list')
-const keywordCount = document.querySelector('#keyword-count')
 const keywordEmpty = document.querySelector('#keyword-empty')
 
 const ENABLED_STORAGE_KEY = 'muteByEntityEnabled'
@@ -41,19 +39,14 @@ function getSiteKey(url = '') {
 }
 
 function renderEnabled(enabled) {
-  enabledInput.checked = enabled
-  filteringStatus.textContent = enabled
-    ? 'On · matching content is hidden'
-    : 'Off · filters remain saved'
-  document.body.classList.toggle('filtering-off', !enabled)
+  enabledButton.dataset.enabled = String(enabled)
+  filteringLabel.textContent = enabled ? 'Pause on this site' : 'Unpause Mute Anyone'
 }
 
 function renderStorageUnavailable() {
-  enabledInput.checked = false
-  enabledInput.disabled = true
+  renderEnabled(false)
+  enabledButton.disabled = true
   startButton.disabled = true
-  filteringStatus.textContent = 'Storage unavailable · reload extension'
-  document.body.classList.add('filtering-off')
   keywordInput.disabled = true
   keywordForm.querySelector('button').disabled = true
   setStatus('Reload Mute Anyone on chrome://extensions, then refresh this website tab.')
@@ -61,7 +54,8 @@ function renderStorageUnavailable() {
 
 function renderProfiles() {
   mutedList.replaceChildren()
-  mutedCount.textContent = String(profiles.length)
+  const profileLabel = profiles.length === 1 ? 'profile' : 'profiles'
+  mutedSummary.textContent = `${profiles.length} ${profileLabel} muted on ${currentSiteKey || 'this site'}`
   mutedEmpty.hidden = profiles.length > 0
 
   for (const profile of profiles) {
@@ -105,7 +99,6 @@ function getBlockedKeywords(siteFilters) {
 
 function renderKeywords() {
   keywordList.replaceChildren()
-  keywordCount.textContent = String(blockedKeywords.length)
   keywordEmpty.hidden = blockedKeywords.length > 0
   keywordInput.disabled = !currentSiteKey
   keywordForm.querySelector('button').disabled = !currentSiteKey
@@ -177,7 +170,7 @@ async function loadState() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
   currentSiteKey = getSiteKey(tab?.url)
   mutedStorageKey = `${MUTED_STORAGE_PREFIX}${currentSiteKey}`
-  siteName.textContent = currentSiteKey || 'Unavailable on this page'
+  renderProfiles()
 
   if (!storageArea) {
     renderStorageUnavailable()
@@ -232,9 +225,9 @@ openSettingsButton.addEventListener('click', async () => {
     setStatus('Could not open settings.')
   }
 })
-enabledInput.addEventListener('change', async () => {
-  const enabled = enabledInput.checked
-  enabledInput.disabled = true
+enabledButton.addEventListener('click', async () => {
+  const enabled = enabledButton.dataset.enabled !== 'true'
+  enabledButton.disabled = true
   try {
     if (!storageArea) throw new Error('Extension storage is unavailable')
     await storageArea.set({ [ENABLED_STORAGE_KEY]: enabled })
@@ -243,7 +236,7 @@ enabledInput.addEventListener('change', async () => {
     renderEnabled(!enabled)
     setStatus('Could not update automatic muting.')
   } finally {
-    enabledInput.disabled = false
+    enabledButton.disabled = false
   }
 })
 keywordForm.addEventListener('submit', async (event) => {

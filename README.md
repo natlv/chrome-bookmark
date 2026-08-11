@@ -62,7 +62,7 @@ TLDR current state: the detection works for Linkedin and Carousell and Youtube a
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select this directory.
 4. Open a normal webpage and press the extension icon.
-5. Choose **Detect new profile**, point at a content box, and confirm the detected profile.
+5. Choose **Find a profile to mute**, point at a content box, and confirm the detected profile.
 
 Use **Automatic muting** in the popup to pause or resume all filtering without
 removing saved profiles. The popup list is scoped to the current hostname. Use
