@@ -3,7 +3,6 @@ const statusElement = document.querySelector('#status')
 const enabledButton = document.querySelector('#extension-enabled')
 const filteringLabel = enabledButton.querySelector('.filtering-label')
 const mutedList = document.querySelector('#muted-list')
-const mutedSummary = document.querySelector('#muted-summary')
 const mutedEmpty = document.querySelector('#muted-empty')
 const openSettingsButton = document.querySelector('#open-settings')
 const keywordForm = document.querySelector('#keyword-form')
@@ -59,8 +58,6 @@ function renderStorageUnavailable() {
 
 function renderProfiles() {
   mutedList.replaceChildren()
-  const profileLabel = profiles.length === 1 ? 'profile' : 'profiles'
-  mutedSummary.textContent = `${profiles.length} ${profileLabel} muted on ${currentSiteKey || 'this site'}`
   mutedEmpty.hidden = profiles.length > 0
 
   for (const profile of profiles) {

@@ -27,9 +27,11 @@
         <div class="muted-heading-row">
           <div>
             <h2 id="muted-heading">Muted profiles</h2>
-            <p id="muted-summary" class="muted-summary">0 profiles muted on this site</p>
           </div>
-          <button id="start-selection" class="find-profile-button" type="button">Find a profile to mute</button>
+          <button id="start-selection" class="find-profile-button" type="button">
+            <span class="button-plus" aria-hidden="true">+</span>
+            <span>Mute a user from your feed</span>
+          </button>
         </div>
         <ul id="muted-list" class="muted-list"></ul>
         <p id="muted-empty" class="empty-state">No profiles muted on this site.</p>
@@ -50,7 +52,10 @@
             placeholder="e.g. B2B SaaS"
             aria-label="Keyword to block"
           />
-          <button type="submit">Add</button>
+          <button type="submit">
+            <span class="button-plus" aria-hidden="true">+</span>
+            <span>Add</span>
+          </button>
         </form>
         <ul id="keyword-list" class="keyword-list"></ul>
         <p id="keyword-empty" class="empty-state">No keywords blocked on this site.</p>
