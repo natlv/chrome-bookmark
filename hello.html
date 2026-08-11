@@ -21,7 +21,7 @@
 
       <section class="extension-control" aria-labelledby="filtering-title">
         <div class="control-copy">
-          <strong id="filtering-title">Automatic muting</strong>
+          <strong id="filtering-title">Automatic filtering</strong>
           <small id="filtering-status">Loading preference…</small>
         </div>
         <label class="switch">
@@ -47,6 +47,29 @@
 
       <p id="status" class="status" role="status" aria-live="polite"></p>
 
+      <section class="keyword-section" aria-labelledby="keyword-heading">
+        <div class="muted-heading-row">
+          <div>
+            <p class="section-label">Current site</p>
+            <h2 id="keyword-heading">Blocked keywords</h2>
+          </div>
+          <span id="keyword-count" class="count-pill">0</span>
+        </div>
+        <form id="keyword-form" class="keyword-form">
+          <input
+            id="keyword-input"
+            type="text"
+            maxlength="100"
+            autocomplete="off"
+            placeholder="e.g. ninjago"
+            aria-label="Keyword to block"
+          />
+          <button type="submit">Add</button>
+        </form>
+        <ul id="keyword-list" class="keyword-list"></ul>
+        <p id="keyword-empty" class="empty-state">No keywords blocked on this site.</p>
+      </section>
+
       <section class="muted-section" aria-labelledby="muted-heading">
         <div class="muted-heading-row">
           <div>
@@ -66,7 +89,7 @@
 
       <footer>
         <span class="privacy-dot" aria-hidden="true"></span>
-        Muted profiles stay on this device
+        Filters stay on this device
       </footer>
     </main>
     <script src="popup.js"></script>

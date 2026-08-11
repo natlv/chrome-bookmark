@@ -7,12 +7,13 @@
   const HIDDEN_STYLE_ID = 'mute-by-entity-hidden-style'
   const ENABLED_STORAGE_KEY = 'muteByEntityEnabled'
   const MUTED_STORAGE_PREFIX = 'muteByEntityMuted:'
+  const SITE_FILTERS_STORAGE_KEY = 'siteFilters'
   const MIN_WIDTH = 150
   const MIN_HEIGHT = 64
   const MAX_ANCESTORS = 18
   const MIN_IDENTITY_SCORE = 7
   const MAX_IDENTITY_SCOPE_GROWTH = 8
-  const MAX_LISTING_LAYOUT_ANCESTORS = 4
+  const MAX_FILTER_LAYOUT_ANCESTORS = 4
   const LINKEDIN_POST_UNIT_SELECTOR =
     '[class*="feed-shared-update" i], [data-urn^="urn:li:activity:"]'
   const LINKEDIN_COMMENT_UNIT_SELECTOR =
@@ -114,6 +115,19 @@
 
   function getMutedStorageKey(siteKey) {
     return `${MUTED_STORAGE_PREFIX}${siteKey}`
+  }
+
+  function normalizeBlockedKeywords(keywords) {
+    if (!Array.isArray(keywords)) return []
+    return [...new Set(
+      keywords
+        .map((keyword) => String(keyword || '').trim().toLowerCase())
+        .filter(Boolean)
+    )]
+  }
+
+  function getBlockedKeywords(siteFilters, siteKey) {
+    return normalizeBlockedKeywords(siteFilters?.[siteKey]?.blockedKeywords)
   }
 
   class ExtensionStateStore {
@@ -771,7 +785,7 @@
           return {
             ...sellerResult,
             scope: 'carousell-listing',
-            container: this.findListingLayoutUnit(carousellUnit),
+            container: this.findFilterTarget(carousellUnit),
           }
         }
       }
@@ -787,7 +801,7 @@
           return {
             ...shopIdResult,
             scope: 'etsy-shop-id',
-            container: this.findListingLayoutUnit(etsyUnit),
+            container: this.findFilterTarget(etsyUnit),
           }
         }
 
@@ -796,7 +810,7 @@
           return {
             ...linkedResult,
             scope: 'current',
-            container: this.findListingLayoutUnit(etsyUnit),
+            container: this.findFilterTarget(etsyUnit),
           }
         }
       }
@@ -1023,7 +1037,7 @@
       if (!(target instanceof Element)) return null
 
       let current = target
-      for (let depth = 0; current && depth <= MAX_LISTING_LAYOUT_ANCESTORS; depth += 1) {
+      for (let depth = 0; current && depth <= MAX_FILTER_LAYOUT_ANCESTORS; depth += 1) {
         if (CAROUSELL_LISTING_TEST_ID.test(current.getAttribute('data-testid') || '')) {
           return current
         }
@@ -1054,10 +1068,10 @@
       return nestedUnits.length === 1 ? nestedUnits[0] : null
     }
 
-    findListingLayoutUnit(listingUnit) {
-      let current = listingUnit
+    findFilterTarget(contentUnit) {
+      let current = contentUnit
 
-      for (let depth = 0; depth < MAX_LISTING_LAYOUT_ANCESTORS; depth += 1) {
+      for (let depth = 0; depth < MAX_FILTER_LAYOUT_ANCESTORS; depth += 1) {
         const parent = current.parentElement
         if (!parent) break
 
@@ -1070,7 +1084,7 @@
         current = parent
       }
 
-      return listingUnit
+      return contentUnit
     }
 
     findEtsyShopId(container) {
@@ -1470,6 +1484,7 @@
       this.mutedStorageKey = getMutedStorageKey(this.siteKey)
       this.enabled = true
       this.profiles = []
+      this.blockedKeywords = []
       this.scanTimer = 0
       this.observer = null
       this.ready = Promise.resolve()
@@ -1478,7 +1493,11 @@
     async init() {
       let state = {}
       try {
-        state = await this.store.get([ENABLED_STORAGE_KEY, this.mutedStorageKey])
+        state = await this.store.get([
+          ENABLED_STORAGE_KEY,
+          this.mutedStorageKey,
+          SITE_FILTERS_STORAGE_KEY,
+        ])
       } catch {
         // Default to enabled with an empty site set if extension storage is unavailable.
       }
@@ -1486,11 +1505,12 @@
       this.profiles = Array.isArray(state[this.mutedStorageKey])
         ? state[this.mutedStorageKey]
         : []
+      this.blockedKeywords = getBlockedKeywords(state[SITE_FILTERS_STORAGE_KEY], this.siteKey)
 
       this.ensureHiddenStyle()
       this.store.onChanged((changes) => this.handleStorageChange(changes))
       this.observer = new MutationObserver((mutations) => {
-        if (!this.enabled || !this.profiles.length) return
+        if (!this.enabled || (!this.profiles.length && !this.blockedKeywords.length)) return
         if (mutations.some((mutation) => mutation.addedNodes.length)) this.scheduleScan()
       })
       this.observer.observe(document.documentElement, { childList: true, subtree: true })
@@ -1538,6 +1558,26 @@
       this.applyState()
     }
 
+    async setBlockedKeywords(keywords) {
+      await this.ready
+      const blockedKeywords = normalizeBlockedKeywords(keywords)
+      const state = await this.store.get([SITE_FILTERS_STORAGE_KEY])
+      const siteFilters = { ...(state[SITE_FILTERS_STORAGE_KEY] || {}) }
+
+      if (blockedKeywords.length) {
+        siteFilters[this.siteKey] = {
+          ...(siteFilters[this.siteKey] || {}),
+          blockedKeywords,
+        }
+      } else {
+        delete siteFilters[this.siteKey]
+      }
+
+      this.blockedKeywords = blockedKeywords
+      await this.store.set({ [SITE_FILTERS_STORAGE_KEY]: siteFilters })
+      this.applyState()
+    }
+
     getIdentityKey(identity) {
       if (identity?.key) return identity.key
       if (identity?.href) {
@@ -1558,13 +1598,20 @@
         this.profiles = Array.isArray(nextProfiles) ? nextProfiles : []
         changed = true
       }
+      if (changes[SITE_FILTERS_STORAGE_KEY]) {
+        this.blockedKeywords = getBlockedKeywords(
+          changes[SITE_FILTERS_STORAGE_KEY].newValue,
+          this.siteKey
+        )
+        changed = true
+      }
       if (changed) this.applyState()
     }
 
     applyState() {
       clearTimeout(this.scanTimer)
       this.scanTimer = 0
-      if (!this.enabled || !this.profiles.length) {
+      if (!this.enabled || (!this.profiles.length && !this.blockedKeywords.length)) {
         this.revealAll()
         return
       }
@@ -1580,17 +1627,37 @@
     }
 
     scan() {
-      if (!this.enabled || !this.profiles.length) return
+      if (!this.enabled || (!this.profiles.length && !this.blockedKeywords.length)) return
 
       const mutedKeys = new Set(this.profiles.map((profile) => profile.key))
       const units = [...document.querySelectorAll(CONTENT_UNIT_SELECTOR)]
+      const hiddenTargets = new Set()
+      const checkedTargets = new Set(document.querySelectorAll(`[${HIDDEN_ATTRIBUTE}]`))
       for (const unit of units) {
         if (!(unit instanceof HTMLElement) || unit.closest(`#${UI_TAG}`)) continue
-        const result = this.controller.findIdentityForMuteUnit(unit)
-        const key = result.status === 'found' ? this.getIdentityKey(result) : ''
-        const target = result.container instanceof HTMLElement ? result.container : unit
-        if (target !== unit) unit.removeAttribute(HIDDEN_ATTRIBUTE)
-        target.toggleAttribute(HIDDEN_ATTRIBUTE, Boolean(key && mutedKeys.has(key)))
+        checkedTargets.add(unit)
+        const filterTarget = this.controller.findFilterTarget(unit)
+        checkedTargets.add(filterTarget)
+
+        if (this.blockedKeywords.length) {
+          const visibleText = (unit.innerText || '').toLowerCase()
+          if (this.blockedKeywords.some((keyword) => visibleText.includes(keyword))) {
+            hiddenTargets.add(filterTarget)
+          }
+        }
+
+        if (mutedKeys.size) {
+          const result = this.controller.findIdentityForMuteUnit(unit)
+          const key = result.status === 'found' ? this.getIdentityKey(result) : ''
+          const contentTarget = result.container instanceof HTMLElement ? result.container : unit
+          const target = this.controller.findFilterTarget(contentTarget)
+          checkedTargets.add(target)
+          if (key && mutedKeys.has(key)) hiddenTargets.add(target)
+        }
+      }
+
+      for (const target of checkedTargets) {
+        target.toggleAttribute(HIDDEN_ATTRIBUTE, hiddenTargets.has(target))
       }
     }
 

@@ -7,15 +7,22 @@ const mutedCount = document.querySelector('#muted-count')
 const mutedEmpty = document.querySelector('#muted-empty')
 const siteName = document.querySelector('#site-name')
 const openSettingsButton = document.querySelector('#open-settings')
+const keywordForm = document.querySelector('#keyword-form')
+const keywordInput = document.querySelector('#keyword-input')
+const keywordList = document.querySelector('#keyword-list')
+const keywordCount = document.querySelector('#keyword-count')
+const keywordEmpty = document.querySelector('#keyword-empty')
 
 const ENABLED_STORAGE_KEY = 'muteByEntityEnabled'
 const MUTED_STORAGE_PREFIX = 'muteByEntityMuted:'
+const SITE_FILTERS_STORAGE_KEY = 'siteFilters'
 const storageArea = globalThis.chrome?.storage?.local
 const storageEvents = globalThis.chrome?.storage?.onChanged
 
 let currentSiteKey = ''
 let mutedStorageKey = ''
 let profiles = []
+let blockedKeywords = []
 
 function setStatus(message) {
   statusElement.textContent = message
@@ -37,7 +44,7 @@ function renderEnabled(enabled) {
   enabledInput.checked = enabled
   filteringStatus.textContent = enabled
     ? 'On · matching content is hidden'
-    : 'Off · muted profiles remain saved'
+    : 'Off · filters remain saved'
   document.body.classList.toggle('filtering-off', !enabled)
 }
 
@@ -47,6 +54,8 @@ function renderStorageUnavailable() {
   startButton.disabled = true
   filteringStatus.textContent = 'Storage unavailable · reload extension'
   document.body.classList.add('filtering-off')
+  keywordInput.disabled = true
+  keywordForm.querySelector('button').disabled = true
   setStatus('Reload Mute Anyone on chrome://extensions, then refresh this website tab.')
 }
 
@@ -84,6 +93,72 @@ function renderProfiles() {
   }
 }
 
+function normalizeKeyword(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function getBlockedKeywords(siteFilters) {
+  const keywords = siteFilters?.[currentSiteKey]?.blockedKeywords
+  if (!Array.isArray(keywords)) return []
+  return [...new Set(keywords.map(normalizeKeyword).filter(Boolean))]
+}
+
+function renderKeywords() {
+  keywordList.replaceChildren()
+  keywordCount.textContent = String(blockedKeywords.length)
+  keywordEmpty.hidden = blockedKeywords.length > 0
+  keywordInput.disabled = !currentSiteKey
+  keywordForm.querySelector('button').disabled = !currentSiteKey
+
+  for (const keyword of blockedKeywords) {
+    const item = document.createElement('li')
+    item.className = 'keyword-item'
+
+    const label = document.createElement('span')
+    label.textContent = keyword
+    label.title = keyword
+
+    const removeButton = document.createElement('button')
+    removeButton.type = 'button'
+    removeButton.textContent = 'Remove'
+    removeButton.setAttribute('aria-label', `Remove blocked keyword ${keyword}`)
+    removeButton.addEventListener('click', () => removeKeyword(keyword, removeButton))
+
+    item.append(label, removeButton)
+    keywordList.append(item)
+  }
+}
+
+async function saveBlockedKeywords(nextKeywords) {
+  if (!storageArea) throw new Error('Extension storage is unavailable')
+  const state = await storageArea.get([SITE_FILTERS_STORAGE_KEY])
+  const siteFilters = { ...(state[SITE_FILTERS_STORAGE_KEY] || {}) }
+
+  if (nextKeywords.length) {
+    siteFilters[currentSiteKey] = {
+      ...(siteFilters[currentSiteKey] || {}),
+      blockedKeywords: nextKeywords,
+    }
+  } else {
+    delete siteFilters[currentSiteKey]
+  }
+
+  await storageArea.set({ [SITE_FILTERS_STORAGE_KEY]: siteFilters })
+}
+
+async function removeKeyword(keyword, button) {
+  button.disabled = true
+  const nextKeywords = blockedKeywords.filter((entry) => entry !== keyword)
+  try {
+    await saveBlockedKeywords(nextKeywords)
+    blockedKeywords = nextKeywords
+    renderKeywords()
+  } catch {
+    setStatus('Could not update blocked keywords.')
+    button.disabled = false
+  }
+}
+
 async function removeProfile(key, button) {
   button.disabled = true
   const nextProfiles = profiles.filter((profile) => profile.key !== key)
@@ -110,12 +185,14 @@ async function loadState() {
   }
 
   const keys = currentSiteKey
-    ? [ENABLED_STORAGE_KEY, mutedStorageKey]
+    ? [ENABLED_STORAGE_KEY, mutedStorageKey, SITE_FILTERS_STORAGE_KEY]
     : [ENABLED_STORAGE_KEY]
   const state = await storageArea.get(keys)
   renderEnabled(state[ENABLED_STORAGE_KEY] !== false)
   profiles = Array.isArray(state[mutedStorageKey]) ? state[mutedStorageKey] : []
+  blockedKeywords = getBlockedKeywords(state[SITE_FILTERS_STORAGE_KEY])
   renderProfiles()
+  renderKeywords()
 }
 
 async function startSelection() {
@@ -169,6 +246,32 @@ enabledInput.addEventListener('change', async () => {
     enabledInput.disabled = false
   }
 })
+keywordForm.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  const keyword = normalizeKeyword(keywordInput.value)
+  if (!keyword || !currentSiteKey) return
+
+  if (blockedKeywords.includes(keyword)) {
+    setStatus(`“${keyword}” is already blocked on this site.`)
+    return
+  }
+
+  const nextKeywords = [...blockedKeywords, keyword]
+  keywordInput.disabled = true
+  keywordForm.querySelector('button').disabled = true
+  setStatus('')
+  try {
+    await saveBlockedKeywords(nextKeywords)
+    blockedKeywords = nextKeywords
+    keywordInput.value = ''
+    renderKeywords()
+  } catch {
+    setStatus('Could not save the blocked keyword.')
+  } finally {
+    keywordInput.disabled = !currentSiteKey
+    keywordForm.querySelector('button').disabled = !currentSiteKey
+  }
+})
 
 if (storageEvents) {
   storageEvents.addListener((changes, areaName) => {
@@ -180,6 +283,10 @@ if (storageEvents) {
       const nextProfiles = changes[mutedStorageKey].newValue
       profiles = Array.isArray(nextProfiles) ? nextProfiles : []
       renderProfiles()
+    }
+    if (changes[SITE_FILTERS_STORAGE_KEY]) {
+      blockedKeywords = getBlockedKeywords(changes[SITE_FILTERS_STORAGE_KEY].newValue)
+      renderKeywords()
     }
   })
 }

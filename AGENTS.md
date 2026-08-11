@@ -10,6 +10,7 @@
 
 - Follow the existing dependency-free JavaScript style: two-space indentation, single quotes, and no semicolons.
 - Prefer small named helpers and shared UI primitives over duplicated markup or CSS.
+- Route every content-hiding rule through the shared filter-target boundary helper. Hide the repeated grid, flex, or list cell rather than only an inner detected card so surrounding content reflows without blank spaces.
 - Keep injected controls inside the existing Shadow DOM so host-page CSS cannot style them.
 - Define injected typography through the shared `--selector-*` tokens and `.selector-type` primitive in `content.js`.
 - Use explicit `font-size`, `font-weight`, and `line-height` properties. Do not combine `inherit` with other values in the `font` shorthand because the whole declaration becomes invalid.

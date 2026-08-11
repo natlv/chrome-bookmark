@@ -12,6 +12,8 @@ The extension currently provides:
 - Automatic page-local filtering on normal HTTP(S) pages, with no network calls
 - A global on/off switch that is independent from profile detection
 - Per-hostname muted profile sets stored only on the current device
+- Per-hostname blocked keywords matched case-insensitively against card text
+- Shared filter-target boundaries so profile and keyword matches collapse their grid or list cells
 - A popup that starts profile detection on demand and lists profiles muted for the current site
 - One-click unmuting from the popup
 - A settings page that lists muted profiles across every site with one-click unmuting
@@ -37,6 +39,7 @@ The extension currently provides:
 - An always-visible **Exit** button in addition to Escape
 - Escape-to-cancel and an explicit mute confirmation step
 - Automatic rescanning as dynamically loaded feed items are added
+- Keyword controls in the popup for adding, viewing, and removing the current site's rules
 - Exact restoration of hidden content when filtering is switched off or a profile is unmuted
 
 Identity detection remains heuristic. A profile is saved only after the user
@@ -66,6 +69,10 @@ removing saved profiles. The popup list is scoped to the current hostname. Use
 **Manage all sites** to open the full settings page, or open the extension's
 options from `chrome://extensions`.
 
+Use **Blocked keywords** in the popup to hide detected cards whose visible text
+contains a keyword. Keywords are case-insensitive and apply only to the current
+hostname.
+
 After updating the unpacked extension, use **Reload** on `chrome://extensions`
 and refresh existing website tabs. Chrome does not activate new manifest
 permissions, including local storage, until the extension is reloaded.
@@ -87,9 +94,11 @@ plain repeated `<div>` result rows, LinkedIn-shaped legacy and current-renderer
 posts with nested comments, inline tagged profiles, and social attribution, plus YouTube-shaped video cards with and
 without a detectable channel. It also includes a Carousell username link and a
 multi-column YouTube rich-grid structure, an overlapping multi-identity box,
-and an Etsy card with separate listing and shop IDs. Use **Add live ACME
-listing** after muting ACME Audio to verify that dynamically inserted matching
-content is hidden automatically.
+and an Etsy card with separate listing and shop IDs. Use **Block demo keywords**
+to hide the existing keyboard plus nested Carousell/Etsy-shaped field-watch
+cells, then **Add live ACME listing** to verify that a dynamically inserted
+keyword match is hidden. You can also add that listing after muting ACME Audio
+to check dynamically inserted profile matches.
 
 ## Structure
 

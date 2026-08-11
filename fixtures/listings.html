@@ -74,6 +74,8 @@
       <div class="demo-actions">
         <button id="start-demo" type="button">Start selector demo</button>
         <button id="add-dynamic-listing" type="button">Add live ACME listing</button>
+        <button id="block-demo-keywords" type="button">Block demo keywords</button>
+        <button id="clear-demo-keywords" type="button">Clear keyword filters</button>
         <button id="toggle-demo-filtering" type="button">Pause demo muting</button>
       </div>
     </header>
@@ -266,6 +268,16 @@
         listing.className = 'product-card'
         listing.innerHTML = '<div class="product-image" style="--color:#d9e5e0">🎙️</div><div class="product-copy"><a class="seller" href="#seller-acme">ACME Audio</a><h2>Live-added microphone</h2><p class="description">A dynamically inserted listing for MutationObserver regression checks.</p><div class="price-row"><span class="price">$79</span><button class="save">Save</button></div></div>'
         document.querySelector('.product-grid').append(listing)
+      })
+      document.querySelector('#block-demo-keywords').addEventListener('click', async () => {
+        await globalThis.__muteByEntityMuting.setBlockedKeywords([
+          'KEYBOARD',
+          'MiCrOpHoNe',
+          'FIELD WATCH',
+        ])
+      })
+      document.querySelector('#clear-demo-keywords').addEventListener('click', async () => {
+        await globalThis.__muteByEntityMuting.setBlockedKeywords([])
       })
       document.querySelector('#toggle-demo-filtering').addEventListener('click', async (event) => {
         const button = event.currentTarget
