@@ -28,7 +28,7 @@ function getProfileLabel(profile) {
 }
 
 function normalizeKeyword(value) {
-  return String(value || '').trim().toLowerCase()
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
 function getMutedSiteEntries(state) {

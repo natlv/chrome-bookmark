@@ -117,11 +117,15 @@
     return `${MUTED_STORAGE_PREFIX}${siteKey}`
   }
 
+  function normalizeKeyword(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase()
+  }
+
   function normalizeBlockedKeywords(keywords) {
     if (!Array.isArray(keywords)) return []
     return [...new Set(
       keywords
-        .map((keyword) => String(keyword || '').trim().toLowerCase())
+        .map(normalizeKeyword)
         .filter(Boolean)
     )]
   }
@@ -1631,7 +1635,7 @@
         checkedTargets.add(filterTarget)
 
         if (this.blockedKeywords.length) {
-          const visibleText = (unit.innerText || '').toLowerCase()
+          const visibleText = normalizeKeyword(unit.innerText)
           if (this.blockedKeywords.some((keyword) => visibleText.includes(keyword))) {
             hiddenTargets.add(filterTarget)
           }

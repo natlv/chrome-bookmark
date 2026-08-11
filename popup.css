@@ -37,7 +37,7 @@ button {
   width: 44px;
   height: 44px;
   flex: none;
-  border-radius: 12px;
+  border-radius: 50%;
   box-shadow: 0 8px 24px rgb(32 44 50 / 18%);
   object-fit: cover;
 }
@@ -54,6 +54,7 @@ button {
 h1 {
   margin: 0;
   font-size: 20px;
+  font-weight: 500;
   line-height: 1.15;
   letter-spacing: -0.025em;
 }

@@ -88,7 +88,7 @@ function renderProfiles() {
 }
 
 function normalizeKeyword(value) {
-  return String(value || '').trim().toLowerCase()
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
 function getBlockedKeywords(siteFilters) {

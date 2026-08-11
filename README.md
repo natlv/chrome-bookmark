@@ -70,8 +70,8 @@ removing saved profiles. The popup list is scoped to the current hostname. Use
 options from `chrome://extensions`.
 
 Use **Blocked keywords** in the popup to hide detected cards whose visible text
-contains a keyword. Keywords are case-insensitive and apply only to the current
-hostname.
+contains a keyword. Keywords are case-insensitive, treat consecutive whitespace
+as one space, and apply only to the current hostname.
 
 After updating the unpacked extension, use **Reload** on `chrome://extensions`
 and refresh existing website tabs. Chrome does not activate new manifest
