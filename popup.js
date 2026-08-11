@@ -10,6 +10,9 @@ const keywordForm = document.querySelector('#keyword-form')
 const keywordInput = document.querySelector('#keyword-input')
 const keywordList = document.querySelector('#keyword-list')
 const keywordEmpty = document.querySelector('#keyword-empty')
+const confirmationDialog = document.querySelector('#remove-confirmation')
+const confirmationQuestion = document.querySelector('#confirmation-question')
+const confirmationConfirm = document.querySelector('#confirmation-confirm')
 
 const ENABLED_STORAGE_KEY = 'muteByEntityEnabled'
 const MUTED_STORAGE_PREFIX = 'muteByEntityMuted:'
@@ -21,6 +24,8 @@ let currentSiteKey = ''
 let mutedStorageKey = ''
 let profiles = []
 let blockedKeywords = []
+let pendingRemoval = null
+let removalTrigger = null
 
 function setStatus(message) {
   statusElement.textContent = message
@@ -62,27 +67,23 @@ function renderProfiles() {
     const item = document.createElement('li')
     item.className = 'muted-profile'
 
-    const icon = document.createElement('span')
-    icon.className = 'profile-icon'
-    icon.textContent = (profile.label || '?').trim().charAt(0).toUpperCase() || '?'
-    icon.setAttribute('aria-hidden', 'true')
-
-    const copy = document.createElement('div')
-    copy.className = 'profile-copy'
     const label = document.createElement('strong')
     label.textContent = profile.label || 'Unknown profile'
-    const type = document.createElement('small')
-    type.textContent = profile.type || 'profile'
-    copy.append(label, type)
+    label.title = profile.label || 'Unknown profile'
 
     const removeButton = document.createElement('button')
-    removeButton.className = 'remove-profile'
+    removeButton.className = 'chip-remove'
     removeButton.type = 'button'
-    removeButton.textContent = 'Unmute'
+    removeButton.textContent = '×'
     removeButton.setAttribute('aria-label', `Unmute ${profile.label || 'profile'}`)
-    removeButton.addEventListener('click', () => removeProfile(profile.key, removeButton))
+    removeButton.addEventListener('click', () => {
+      const profileLabel = profile.label || 'this profile'
+      openConfirmation(`Unmute ${profileLabel}?`, 'Unmute', removeButton, () => {
+        removeProfile(profile.key, removeButton)
+      })
+    })
 
-    item.append(icon, copy, removeButton)
+    item.append(label, removeButton)
     mutedList.append(item)
   }
 }
@@ -112,15 +113,43 @@ function renderKeywords() {
     label.title = keyword
 
     const removeButton = document.createElement('button')
+    removeButton.className = 'chip-remove'
     removeButton.type = 'button'
-    removeButton.textContent = 'Remove'
-    removeButton.setAttribute('aria-label', `Remove blocked keyword ${keyword}`)
-    removeButton.addEventListener('click', () => removeKeyword(keyword, removeButton))
+    removeButton.textContent = '×'
+    removeButton.setAttribute('aria-label', `Stop filtering for ${keyword}`)
+    removeButton.addEventListener('click', () => {
+      openConfirmation(`Stop filtering for ${keyword}?`, 'Stop filtering', removeButton, () => {
+        removeKeyword(keyword, removeButton)
+      })
+    })
 
     item.append(label, removeButton)
     keywordList.append(item)
   }
 }
+
+function openConfirmation(question, confirmLabel, trigger, onConfirm) {
+  pendingRemoval = onConfirm
+  removalTrigger = trigger
+  confirmationQuestion.textContent = question
+  confirmationConfirm.textContent = confirmLabel
+  confirmationDialog.returnValue = ''
+  confirmationDialog.showModal()
+}
+
+confirmationDialog.addEventListener('close', () => {
+  const shouldRemove = confirmationDialog.returnValue === 'confirm'
+  const removal = pendingRemoval
+  const trigger = removalTrigger
+  pendingRemoval = null
+  removalTrigger = null
+
+  if (shouldRemove) {
+    removal?.()
+  } else {
+    trigger?.focus()
+  }
+})
 
 async function saveBlockedKeywords(nextKeywords) {
   if (!storageArea) throw new Error('Extension storage is unavailable')

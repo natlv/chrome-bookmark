@@ -33,10 +33,6 @@
         </div>
         <ul id="muted-list" class="muted-list"></ul>
         <p id="muted-empty" class="empty-state">No profiles muted on this site.</p>
-        <button id="open-settings" class="settings-link" type="button">
-          <span>Manage all sites</span>
-          <span aria-hidden="true">→</span>
-        </button>
       </section>
 
       <section class="keyword-section" aria-labelledby="keyword-heading">
@@ -59,7 +55,31 @@
         <ul id="keyword-list" class="keyword-list"></ul>
         <p id="keyword-empty" class="empty-state">No keywords blocked on this site.</p>
       </section>
+
+      <section class="manage-section">
+        <div class="muted-heading-row">
+          <div>
+            <h2 id="muted-heading">Management and settings</h2>
+          </div>
+        </div>
+        <button id="open-settings" class="settings-link" type="button">
+          <span>Manage choices on all sites</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </section>
     </main>
+
+    <dialog id="remove-confirmation" class="remove-confirmation" aria-labelledby="confirmation-question">
+      <form method="dialog" class="confirmation-card">
+        <p id="confirmation-question" class="confirmation-question"></p>
+        <div class="confirmation-actions">
+          <button class="confirmation-cancel" type="submit" value="cancel">Cancel</button>
+          <button id="confirmation-confirm" class="confirmation-confirm" type="submit" value="confirm">
+            Confirm
+          </button>
+        </div>
+      </form>
+    </dialog>
     <script src="popup.js"></script>
   </body>
 </html>
