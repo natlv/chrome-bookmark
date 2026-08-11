@@ -3,29 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Muted profiles · Mute Anyone</title>
+    <title>Content filters · Mute Anyone</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="options.html" aria-label="Mute Anyone settings">
-        <span class="brand-mark" aria-hidden="true">
-          <span></span>
-          <span></span>
-        </span>
+        <img class="brand-icon" src="icon.png" alt="" />
         <span>Mute Anyone</span>
       </a>
-      <span class="device-note"><span aria-hidden="true"></span>Saved on this device</span>
+      <span class="device-note">
+        <span aria-hidden="true"></span>
+        Your filters and data are kept within your browser and won't be shared with anyone.
+      </span>
     </header>
 
     <main class="settings-shell">
       <section class="page-heading" aria-labelledby="page-title">
         <div>
           <p class="eyebrow">Settings</p>
-          <h1 id="page-title">Muted profiles</h1>
-          <p class="lede">See who you’ve muted on each site and unmute profiles at any time.</p>
+          <h1 id="page-title">Content filters</h1>
         </div>
-        <div class="summary" aria-label="Muted profile summary">
+        <div class="summary" aria-label="Content filter summary">
           <div>
             <strong id="site-count">0</strong>
             <span>Sites</span>
@@ -34,23 +33,40 @@
             <strong id="profile-count">0</strong>
             <span>Profiles</span>
           </div>
+          <div>
+            <strong id="keyword-count">0</strong>
+            <span>Keywords</span>
+          </div>
         </div>
       </section>
 
       <p id="status" class="status" role="status" aria-live="polite"></p>
 
-      <section class="sites-section" aria-labelledby="sites-title">
-        <div class="section-heading">
-          <h2 id="sites-title">All sites</h2>
-          <p>Profiles are grouped by the site where you muted them.</p>
-        </div>
-        <div id="site-list" class="site-list"></div>
-        <div id="empty-state" class="empty-state" hidden>
-          <span class="empty-icon" aria-hidden="true">✓</span>
-          <h2>No muted profiles</h2>
-          <p>Profiles you mute from the extension popup will appear here.</p>
-        </div>
-      </section>
+      <div class="filter-columns">
+        <section class="sites-section" aria-labelledby="sites-title">
+          <div class="section-heading">
+            <h2 id="sites-title">Muted profiles</h2>
+          </div>
+          <div id="site-list" class="site-list"></div>
+          <div id="empty-state" class="empty-state" hidden>
+            <span class="empty-icon" aria-hidden="true">✓</span>
+            <h2>No muted profiles</h2>
+            <p>Profiles you mute from the extension popup will appear here.</p>
+          </div>
+        </section>
+
+        <section class="sites-section" aria-labelledby="keywords-title">
+          <div class="section-heading">
+            <h2 id="keywords-title">Blocked keywords</h2>
+          </div>
+          <div id="keyword-site-list" class="site-list"></div>
+          <div id="keyword-empty-state" class="empty-state" hidden>
+            <span class="empty-icon keyword-empty-icon" aria-hidden="true">#</span>
+            <h2>No blocked keywords</h2>
+            <p>Keywords you block from the extension popup will appear here.</p>
+          </div>
+        </section>
+      </div>
     </main>
 
     <script src="options.js"></script>

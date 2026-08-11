@@ -16,7 +16,7 @@ The extension currently provides:
 - Shared filter-target boundaries so profile and keyword matches collapse their grid or list cells
 - A popup that starts profile detection on demand and lists profiles muted for the current site
 - One-click unmuting from the popup
-- A settings page that lists muted profiles across every site with one-click unmuting
+- A responsive settings page that lists muted profiles and blocked keywords across every site
 - Isolated hover and confirmation UI rendered in a Shadow DOM
 - Semantic and repeated-sibling container scoring
 - Read-only seller/author/commenter detection while hovering
