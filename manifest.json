@@ -1,6 +1,6 @@
 {
   "name": "Mute Anyone",
-  "description": "Mute profiles and automatically hide their content on each site.",
+  "description": "Mute profiles or keywords and automatically hide content when browsing.",
   "version": "0.2.1",
   "manifest_version": 3,
   "permissions": ["activeTab", "scripting", "storage"],

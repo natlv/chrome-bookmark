@@ -42,6 +42,24 @@ function getSiteKey(url = '') {
   }
 }
 
+function getProfileDisplayLabel(profile) {
+  const fallback = profile?.label || 'Unknown profile'
+  const usesProfileSlug =
+    currentSiteKey === 'linkedin.com' ||
+    currentSiteKey.endsWith('.linkedin.com') ||
+    currentSiteKey === 'reddit.com' ||
+    currentSiteKey.endsWith('.reddit.com')
+
+  if (!usesProfileSlug || !profile?.href) return fallback
+
+  try {
+    const segments = new URL(profile.href).pathname.split('/').filter(Boolean)
+    return decodeURIComponent(segments.at(-1)) || fallback
+  } catch {
+    return fallback
+  }
+}
+
 function renderEnabled(enabled) {
   enabledButton.dataset.enabled = String(enabled)
   filteringLabel.textContent = enabled ? 'Pause on this site' : 'Unpause Mute Anyone'
@@ -64,17 +82,18 @@ function renderProfiles() {
     const item = document.createElement('li')
     item.className = 'muted-profile'
 
+    const profileLabel = getProfileDisplayLabel(profile)
+
     const label = document.createElement('strong')
-    label.textContent = profile.label || 'Unknown profile'
-    label.title = profile.label || 'Unknown profile'
+    label.textContent = profileLabel
+    label.title = profileLabel
 
     const removeButton = document.createElement('button')
     removeButton.className = 'chip-remove'
     removeButton.type = 'button'
     removeButton.textContent = '×'
-    removeButton.setAttribute('aria-label', `Unmute ${profile.label || 'profile'}`)
+    removeButton.setAttribute('aria-label', `Unmute ${profileLabel}`)
     removeButton.addEventListener('click', () => {
-      const profileLabel = profile.label || 'this profile'
       openConfirmation(`Unmute ${profileLabel}?`, 'Unmute', removeButton, () => {
         removeProfile(profile.key, removeButton)
       })

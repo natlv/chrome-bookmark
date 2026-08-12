@@ -107,6 +107,7 @@ to check dynamically inserted profile matches.
 - `options.html`, `options.css`, `options.js` — all-sites settings page
 - `content.js` — page-local container-selection controller and isolated UI
 - `fixtures/listings.html` — deterministic visual test page
+- `store-assets/` — source artwork for the Chrome Web Store listing
 
 The controller emits a `mute-by-entity:profile-muted` event after a profile has
 been persisted. Muted profile data contains only the detected identity key,
