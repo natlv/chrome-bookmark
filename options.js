@@ -27,6 +27,44 @@ function getProfileLabel(profile) {
   return String(profile?.label || 'Unknown profile')
 }
 
+function isSiteHostname(hostname, domain) {
+  return hostname === domain || hostname.endsWith(`.${domain}`)
+}
+
+function getProfileDisplayLabel(hostname, profile) {
+  const fallback = getProfileLabel(profile)
+  const usesProfileSlug =
+    isSiteHostname(hostname, 'linkedin.com') ||
+    isSiteHostname(hostname, 'reddit.com')
+
+  if (!usesProfileSlug || !profile?.href) return fallback
+
+  try {
+    const segments = new URL(profile.href).pathname.split('/').filter(Boolean)
+    return decodeURIComponent(segments.at(-1)) || fallback
+  } catch {
+    return fallback
+  }
+}
+
+function getProfileIdentityTarget(hostname, profile) {
+  try {
+    const url = new URL(profile?.href)
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return { value: url.href, href: url.href }
+    }
+  } catch {
+    // Fall through to a stable identifier when this identity has no URL.
+  }
+
+  const entityId = String(profile?.entityId ?? '').trim()
+  if (!entityId) return null
+
+  const fallbackLabel = isSiteHostname(hostname, 'etsy.com') ? 'Shop ID' : 'Identity ID'
+  const identityLabel = String(profile?.entityIdLabel || fallbackLabel).trim() || fallbackLabel
+  return { value: `${identityLabel}: ${entityId}`, href: '' }
+}
+
 function normalizeKeyword(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase()
 }
@@ -67,25 +105,48 @@ function getKeywordSiteEntries(state) {
 function createProfileRow(site, profile) {
   const item = document.createElement('li')
   item.className = 'profile-row'
+  const profileLabel = getProfileDisplayLabel(site.hostname, profile)
+  const identityTarget = getProfileIdentityTarget(site.hostname, profile)
 
   const icon = document.createElement('span')
   icon.className = 'profile-icon'
-  icon.textContent = getInitial(profile.label)
+  icon.textContent = getInitial(profileLabel)
   icon.setAttribute('aria-hidden', 'true')
 
   const copy = document.createElement('div')
   copy.className = 'profile-copy'
   const label = document.createElement('strong')
-  label.textContent = getProfileLabel(profile)
-  const type = document.createElement('span')
-  type.textContent = String(profile.type || 'profile')
-  copy.append(label, type)
+  label.textContent = profileLabel
+  label.title = profileLabel
+  copy.append(label)
+
+  if (identityTarget?.href) {
+    const link = document.createElement('a')
+    link.className = 'profile-link'
+    link.href = identityTarget.href
+    link.textContent = identityTarget.value
+    link.title = identityTarget.value
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    copy.append(link)
+  } else if (identityTarget) {
+    const identity = document.createElement('span')
+    identity.className = 'profile-identity'
+    identity.textContent = identityTarget.value
+    identity.title = identityTarget.value
+    copy.append(identity)
+  } else {
+    const type = document.createElement('span')
+    type.className = 'profile-type'
+    type.textContent = String(profile.type || 'profile')
+    copy.append(type)
+  }
 
   const button = document.createElement('button')
   button.className = 'unmute-button'
   button.type = 'button'
   button.textContent = 'Unmute'
-  button.setAttribute('aria-label', `Unmute ${getProfileLabel(profile)} on ${site.hostname}`)
+  button.setAttribute('aria-label', `Unmute ${profileLabel} on ${site.hostname}`)
   button.addEventListener('click', () => removeProfile(site.key, profile.key, button))
 
   item.append(icon, copy, button)

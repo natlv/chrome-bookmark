@@ -113,6 +113,10 @@
     }
   }
 
+  function isEtsyHostname(hostname) {
+    return hostname === 'etsy.com' || hostname.endsWith('.etsy.com')
+  }
+
   function getMutedStorageKey(siteKey) {
     return `${MUTED_STORAGE_PREFIX}${siteKey}`
   }
@@ -1020,7 +1024,7 @@
 
     isEtsyPage() {
       const host = location.hostname.replace(/^www\./i, '').toLowerCase()
-      return host === 'etsy.com' || host.endsWith('.etsy.com')
+      return isEtsyHostname(host)
     }
 
     isCarousellPage() {
@@ -1092,12 +1096,32 @@
         key: `etsy:shop:${shopId}`,
         label: shopId,
         type: 'seller',
-        href: null,
+        href: this.getEtsyShopHref(container),
         entityId: shopId,
         entityIdLabel: 'Shop ID',
         shopId,
         score: 30,
       }
+    }
+
+    getEtsyShopHref(container) {
+      for (const anchor of container.querySelectorAll('a[href]')) {
+        try {
+          const url = new URL(anchor.href, location.href)
+          const host = url.hostname.replace(/^www\./i, '').toLowerCase()
+          const segments = url.pathname.split('/').filter(Boolean)
+          if (!isEtsyHostname(host) || segments[0]?.toLowerCase() !== 'shop' || !segments[1]) continue
+
+          url.pathname = `/shop/${segments[1]}`
+          url.search = ''
+          url.hash = ''
+          return url.href
+        } catch {
+          // Ignore malformed links and keep looking for a valid Etsy shop URL.
+        }
+      }
+
+      return null
     }
 
     isYouTubePage() {
@@ -1538,6 +1562,7 @@
         type: String(identity.entityType || identity.type || 'person').slice(0, 32),
         href: identity.href || null,
         entityId: identity.entityId || null,
+        entityIdLabel: identity.entityIdLabel || null,
         mutedAt: new Date().toISOString(),
       }
       this.profiles = [...this.profiles, profile]

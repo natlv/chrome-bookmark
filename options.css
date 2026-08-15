@@ -50,7 +50,6 @@ button {
   flex: none;
   border-radius: 12px;
   object-fit: contain;
-  box-shadow: 0 8px 20px rgb(32 44 50 / 15%);
 }
 
 .device-note {
@@ -297,7 +296,8 @@ h1 {
 }
 
 .profile-copy strong,
-.profile-copy span {
+.profile-copy span,
+.profile-copy a {
   display: block;
   max-width: 100%;
   overflow: hidden;
@@ -310,12 +310,32 @@ h1 {
   line-height: 1.4;
 }
 
-.profile-copy span {
+.profile-copy span,
+.profile-copy a {
   margin-top: 2px;
   color: #7c8587;
   font-size: 10px;
   line-height: 1.35;
+}
+
+.profile-copy .profile-type {
   text-transform: capitalize;
+}
+
+.profile-copy a {
+  text-decoration-color: rgb(124 133 135 / 45%);
+  text-underline-offset: 2px;
+}
+
+.profile-copy a:hover {
+  color: #176143;
+  text-decoration-color: currentColor;
+}
+
+.profile-copy a:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid rgb(63 159 118 / 30%);
+  outline-offset: 2px;
 }
 
 .unmute-button,
