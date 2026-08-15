@@ -1,6 +1,6 @@
 {
-  "name": "Mute Anyone",
-  "description": "Mute profiles or keywords and automatically hide content when browsing.",
+  "name": "Feed Cleanser",
+  "description": "Automatically hide unwanted content when browsing.",
   "version": "0.2.1",
   "manifest_version": 3,
   "permissions": ["activeTab", "scripting", "storage"],
