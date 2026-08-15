@@ -1,4 +1,4 @@
-# Mute Anyone
+# Feed Cleanser (previously Mute Anyone)
 
 A privacy-limited Chrome extension that mutes profiles per site and hides
 content they create. This repository intentionally does not use UTags code or
@@ -54,7 +54,7 @@ make that surrounding post match the muted entity. A matching comment can be
 removed at the comment boundary while leaving the post intact, so following the
 post author does not need to be inferred from fragile feed markup.
 
-TLDR current state: the detection works for Linkedin and Carousell and Youtube and Reddit (around 90%, edge cases to be ironed out later without sacrificing the main working functionality). Etsy listing cards expose a stable numeric `data-shop-id`, which is now captured directly without depending on the displayed shop name. Doesn't work at all yet for Ebay or Pinterest (expected because creator names are not displayed until you click on a specific listing). Instagram is deferred because its native controls cover basic account muting.
+TLDR current state: the detection works for Linkedin and Carousell and Youtube and Reddit. Etsy listing cards expose a stable numeric `data-shop-id`, which is now captured directly without depending on the displayed shop name. Doesn't work at all yet for Ebay or Pinterest (expected because creator names are not displayed until you click on a specific listing). Instagram is deferred because its native controls cover basic account muting.
 
 ## Try it in Chrome
 
