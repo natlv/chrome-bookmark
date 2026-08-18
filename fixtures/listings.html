@@ -37,6 +37,12 @@
       .result-row h3 { margin: 0 0 5px; font-size: 16px; }
       .result-row p { margin: 0; color: #6b7678; font-size: 12px; }
       .result-row a { color: #bb4b34; font-size: 12px; font-weight: 800; }
+      .contents-result-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+      .contents-result-items { display: contents; }
+      .contents-result-cell { min-width: 0; }
+      .contents-result-card { height: 100%; grid-template-columns: 48px minmax(0, 1fr); }
+      .contents-result-card .avatar { width: 48px; height: 48px; }
+      .contents-result-card a { min-width: 0; overflow-wrap: anywhere; }
       .post-section { margin-top: 54px; }
       .post-section > h2 { font-size: 28px; }
       .post-card { display: grid; grid-template-columns: 1.25fr .75fr; overflow: hidden; margin-top: 18px; border: 1px solid #ddd7cc; border-radius: 18px; background: #fffdf8; }
@@ -64,7 +70,7 @@
       .linkedin-avatar { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; vertical-align: middle; }
       .embedded-comment { margin: 15px 18px 18px; padding: 13px; border: 1px solid #e1dbd0; border-radius: 12px; background: #f8f5ef; }
       .embedded-comment p { margin: 6px 0 0; color: #697477; font-size: 12px; }
-      @media (max-width: 780px) { header { align-items: flex-start; gap: 12px; } .demo-actions { flex-direction: column; } .product-grid { grid-template-columns: 1fr; } }
+      @media (max-width: 780px) { header { align-items: flex-start; gap: 12px; } .demo-actions { flex-direction: column; } .product-grid, .contents-result-list { grid-template-columns: 1fr; } }
       @media (max-width: 780px) { .platform-grid { grid-template-columns: 1fr; } }
     </style>
   </head>
@@ -110,6 +116,20 @@
           <div class="marketplace-cell">
             <div class="marketplace-shell">
               <div class="result-row" data-testid="listing-card-41001"><div class="avatar">⌚</div><div><h3>Vintage field watch</h3><p>Carousell-shaped listing · nested inside a separate grid cell</p></div><a href="https://www.carousell.sg/u/watch.pieces/"><span data-testid="listing-card-text-seller-name">watch.pieces</span><br><span>2 days ago</span></a></div>
+            </div>
+          </div>
+        </div>
+        <h2>Display-contents marketplace grid</h2>
+        <div class="contents-result-list">
+          <div class="contents-result-items">
+            <div class="contents-result-cell">
+              <div class="result-row contents-result-card" data-testid="listing-card-42001"><div class="avatar">🧱</div><div><h3>Technic race car</h3><p>Search-shaped listing · first transparent-grid cell</p><a href="https://www.carousell.sg/u/brick.driver/"><span data-testid="listing-card-text-seller-name">brick.driver</span></a></div></div>
+            </div>
+            <div class="contents-result-cell">
+              <div class="result-row contents-result-card" data-testid="listing-card-42002"><div class="avatar">⚙️</div><div><h3>Assorted gear pack</h3><p>Search-shaped listing · second transparent-grid cell</p><a href="https://www.carousell.sg/u/gear.house/"><span data-testid="listing-card-text-seller-name">gear.house</span></a></div></div>
+            </div>
+            <div class="contents-result-cell">
+              <div class="result-row contents-result-card" data-testid="listing-card-42003"><div class="avatar">🏗️</div><div><h3>Mobile crane set</h3><p>Search-shaped listing · third transparent-grid cell</p><a href="https://www.carousell.sg/u/crane.club/"><span data-testid="listing-card-text-seller-name">crane.club</span></a></div></div>
             </div>
           </div>
         </div>

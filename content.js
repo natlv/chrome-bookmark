@@ -1076,9 +1076,12 @@
 
         const parentDisplay = getComputedStyle(parent).display
         const isLayout = ['flex', 'inline-flex', 'grid', 'inline-grid'].includes(parentDisplay)
-        const isRepeatedLayout = isLayout && parent.children.length > 1
+        const isTransparentLayout = parentDisplay === 'contents'
+        const isRepeatedLayout = (isLayout || isTransparentLayout) && parent.children.length > 1
         const isListItem = current.matches('li') && parent.matches('ul,ol')
-        if (isRepeatedLayout || isListItem) return current
+        if (isRepeatedLayout || isListItem) {
+          return this.hasMultipleTopLevelContentUnits(current) ? contentUnit : current
+        }
 
         current = parent
       }
@@ -1324,14 +1327,12 @@
       }
     }
 
-    countNestedContentUnits(container) {
-      const matches = [...container.querySelectorAll(CONTENT_UNIT_SELECTOR)].filter(
-        (element) => element !== container && this.isViable(element)
-      )
+    hasMultipleTopLevelContentUnits(container) {
+      const matches = [...container.querySelectorAll(CONTENT_UNIT_SELECTOR)]
       const topLevel = matches.filter(
         (element) => !matches.some((other) => other !== element && other.contains(element))
       )
-      return topLevel.length
+      return topLevel.length > 1
     }
 
     renderIdentity(result) {
