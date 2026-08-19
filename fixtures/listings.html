@@ -43,6 +43,14 @@
       .contents-result-card { height: 100%; grid-template-columns: 48px minmax(0, 1fr); }
       .contents-result-card .avatar { width: 48px; height: 48px; }
       .contents-result-card a { min-width: 0; overflow-wrap: anywhere; }
+      .generic-section { margin-top: 54px; }
+      .generic-section > h2 { font-size: 28px; }
+      .neutral-feed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .neutral-entry { min-width: 0; padding: 18px; border: 1px solid #ddd7cc; border-radius: 14px; background: #fffdf8; }
+      .neutral-entry h3 { margin: 0 0 8px; }
+      .neutral-entry p { min-height: 40px; color: #697477; font-size: 13px; line-height: 1.5; }
+      .neutral-owner { margin-top: 16px; padding-top: 12px; border-top: 1px solid #ebe5da; }
+      .neutral-owner a { color: #bd4c35; font-size: 12px; font-weight: 800; }
       .post-section { margin-top: 54px; }
       .post-section > h2 { font-size: 28px; }
       .post-card { display: grid; grid-template-columns: 1.25fr .75fr; overflow: hidden; margin-top: 18px; border: 1px solid #ddd7cc; border-radius: 18px; background: #fffdf8; }
@@ -70,7 +78,7 @@
       .linkedin-avatar { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; vertical-align: middle; }
       .embedded-comment { margin: 15px 18px 18px; padding: 13px; border: 1px solid #e1dbd0; border-radius: 12px; background: #f8f5ef; }
       .embedded-comment p { margin: 6px 0 0; color: #697477; font-size: 12px; }
-      @media (max-width: 780px) { header { align-items: flex-start; gap: 12px; } .demo-actions { flex-direction: column; } .product-grid, .contents-result-list { grid-template-columns: 1fr; } }
+      @media (max-width: 780px) { header { align-items: flex-start; gap: 12px; } .demo-actions { flex-direction: column; } .product-grid, .contents-result-list, .neutral-feed { grid-template-columns: 1fr; } }
       @media (max-width: 780px) { .platform-grid { grid-template-columns: 1fr; } }
     </style>
   </head>
@@ -93,7 +101,7 @@
       </section>
 
       <section class="product-grid" aria-label="Featured listings">
-        <article class="product-card">
+        <article class="product-card" data-fixture="generic-seller">
           <div class="product-image" style="--color:#e6d6c5">🎧</div>
           <div class="product-copy"><a class="seller" href="#seller-acme">ACME Audio</a><h2>Studio headphones</h2><p class="description">Closed-back headphones with replaceable cushions and a travel case.</p><div class="price-row"><span class="price">$129</span><button class="save">Save</button></div></div>
         </article>
@@ -115,7 +123,7 @@
           <div class="result-row"><div class="avatar">🫖</div><div><h3>Stoneware teapot</h3><p>Kitchen listing · 900 ml</p></div><a href="/sellers/field-studio">Field Studio</a></div>
           <div class="marketplace-cell">
             <div class="marketplace-shell">
-              <div class="result-row" data-testid="listing-card-41001"><div class="avatar">⌚</div><div><h3>Vintage field watch</h3><p>Carousell-shaped listing · nested inside a separate grid cell</p></div><a href="https://www.carousell.sg/u/watch.pieces/"><span data-testid="listing-card-text-seller-name">watch.pieces</span><br><span>2 days ago</span></a></div>
+              <div class="result-row" data-fixture="carousell-listing" data-testid="listing-card-41001"><div class="avatar">⌚</div><div><h3>Vintage field watch</h3><p>Carousell-shaped listing · nested inside a separate grid cell</p></div><a href="https://www.carousell.sg/u/watch.pieces/"><span data-testid="listing-card-text-seller-name">watch.pieces</span><br><span>2 days ago</span></a></div>
             </div>
           </div>
         </div>
@@ -123,7 +131,7 @@
         <div class="contents-result-list">
           <div class="contents-result-items">
             <div class="contents-result-cell">
-              <div class="result-row contents-result-card" data-testid="listing-card-42001"><div class="avatar">🧱</div><div><h3>Technic race car</h3><p>Search-shaped listing · first transparent-grid cell</p><a href="https://www.carousell.sg/u/brick.driver/"><span data-testid="listing-card-text-seller-name">brick.driver</span></a></div></div>
+              <div class="result-row contents-result-card" data-fixture="contents-listing" data-testid="listing-card-42001"><div class="avatar">🧱</div><div><h3>Technic race car</h3><p>Search-shaped listing · first transparent-grid cell</p><a href="https://www.carousell.sg/u/brick.driver/"><span data-testid="listing-card-text-seller-name">brick.driver</span></a></div></div>
             </div>
             <div class="contents-result-cell">
               <div class="result-row contents-result-card" data-testid="listing-card-42002"><div class="avatar">⚙️</div><div><h3>Assorted gear pack</h3><p>Search-shaped listing · second transparent-grid cell</p><a href="https://www.carousell.sg/u/gear.house/"><span data-testid="listing-card-text-seller-name">gear.house</span></a></div></div>
@@ -131,6 +139,28 @@
             <div class="contents-result-cell">
               <div class="result-row contents-result-card" data-testid="listing-card-42003"><div class="avatar">🏗️</div><div><h3>Mobile crane set</h3><p>Search-shaped listing · third transparent-grid cell</p><a href="https://www.carousell.sg/u/crane.club/"><span data-testid="listing-card-text-seller-name">crane.club</span></a></div></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="generic-section">
+        <h2>Identity-seeded generic cards</h2>
+        <p>These repeated boxes deliberately avoid every static content-unit selector. Their owner links must seed generic discovery, as on Circlly marketplaces.</p>
+        <div class="neutral-feed">
+          <div class="neutral-entry" data-fixture="generic-repeated-owner">
+            <h3>Ribbon-trimmed headdress</h3>
+            <p>A generic marketplace entry with no card, listing, product, result, tile, post, or article marker.</p>
+            <div class="neutral-owner"><a href="https://market.example/users/koi-cat">Koi Cat</a></div>
+          </div>
+          <div class="neutral-entry" data-fixture="generic-repeated-owner-second">
+            <h3>Velvet bow accessory</h3>
+            <p>A second item from the same owner verifies automatic matching across repeated boxes.</p>
+            <div class="neutral-owner"><a href="https://market.example/users/koi-cat">Koi Cat</a></div>
+          </div>
+          <div class="neutral-entry" data-fixture="generic-repeated-other">
+            <h3>Lace cuff set</h3>
+            <p>A structurally similar item from another owner must remain visible when Koi Cat is muted.</p>
+            <div class="neutral-owner"><a href="https://market.example/users/lace-studio">Lace Studio</a></div>
           </div>
         </div>
       </section>
@@ -154,7 +184,7 @@
       <section class="platform-section">
         <h2>LinkedIn and YouTube-shaped content</h2>
         <div class="platform-grid">
-          <article class="feed-shared-update-v2 platform-card">
+          <article class="feed-shared-update-v2 platform-card" data-fixture="linkedin-post">
             <div class="update-components-header social-context">
               <a class="update-components-actor__meta-link" href="https://www.linkedin.com/in/samira-patel/">Samira Patel</a> liked this
             </div>
@@ -169,7 +199,7 @@
                 is tagged in its content and another profile is linked in its comment.
               </p>
             </div>
-            <article class="comments-comment-item embedded-comment">
+            <article class="comments-comment-item embedded-comment" data-fixture="linkedin-comment">
               <a class="comments-post-meta__actor-link actor" href="https://www.linkedin.com/in/alex-kim/">Alex Kim</a>
               <p>The comment itself should resolve to Alex.</p>
             </article>
@@ -207,7 +237,7 @@
             </article>
           </div>
 
-          <ytd-video-renderer class="platform-card">
+          <ytd-video-renderer class="platform-card" data-fixture="youtube-video">
             <div class="platform-media" aria-label="Video thumbnail">▶</div>
             <div class="platform-copy">
               <h3><a href="https://www.youtube.com/watch?v=fixture-video">A clearly attributed video</a></h3>
@@ -220,7 +250,7 @@
             </div>
           </ytd-video-renderer>
 
-          <ytd-video-renderer class="platform-card">
+          <ytd-video-renderer class="platform-card" data-fixture="youtube-unattributed">
             <div class="platform-media" aria-label="Video thumbnail without a nearby channel">◼</div>
             <div class="platform-copy">
               <h3><a href="https://www.youtube.com/watch?v=unattributed-fixture">Video whose channel link has not loaded</a></h3>
@@ -243,7 +273,7 @@
             </div>
           </ytd-rich-item-renderer>
 
-          <article class="platform-card">
+          <article class="platform-card" data-fixture="ambiguous-authors">
             <div class="platform-copy">
               <div class="post-author">
                 <a rel="author" href="/profiles/ada">Ada</a>
@@ -256,7 +286,7 @@
           </article>
 
           <div class="marketplace-cell">
-            <article class="etsy-listing-card platform-card" data-listing-id="1871190283">
+            <article class="etsy-listing-card platform-card" data-fixture="etsy-listing" data-listing-id="1871190283">
               <div class="v2-listing-card marketplace-shell" data-shop-id="43008218">
                 <div class="platform-media" aria-label="Etsy listing thumbnail">✦</div>
                 <div class="platform-copy">
@@ -311,6 +341,60 @@
           ? 'Pause demo muting'
           : 'Resume demo muting'
       }, 0)
+
+      globalThis.__runMuteByEntityFixtureChecks = () => {
+        const controller = globalThis.__muteByEntitySelector
+        const engine = globalThis.__muteByEntityMuting
+        const detect = (name) =>
+          controller.findIdentityForMuteUnit(document.querySelector(`[data-fixture="${name}"]`))
+        const boundary = (name) =>
+          controller.resolveFilterBoundary(document.querySelector(`[data-fixture="${name}"]`))
+        const discoveredUnits = controller.discoverContentUnits()
+        const genericRepeatedUnit = document.querySelector('[data-fixture="generic-repeated-owner"]')
+        const genericRepeatedIdentity = detect('generic-repeated-owner')
+        const previousProfiles = engine.profiles
+        engine.profiles = [{ key: genericRepeatedIdentity.key }]
+        engine.scan()
+        const hiddenGenericMatches = document.querySelectorAll(
+          '[data-fixture^="generic-repeated-owner"][data-mute-by-entity-hidden]'
+        ).length
+        const otherGenericHidden = document
+          .querySelector('[data-fixture="generic-repeated-other"]')
+          .hasAttribute('data-mute-by-entity-hidden')
+        engine.profiles = previousProfiles
+        engine.revealAll()
+        const checks = [
+          ['generic seller', detect('generic-seller').label === 'ACME Audio'],
+          ['generic ownership relationship', detect('generic-seller').relationship === 'owner'],
+          ['identity-seeded repeated discovery', discoveredUnits.includes(genericRepeatedUnit)],
+          ['identity-seeded owner', genericRepeatedIdentity.label === 'Koi Cat'],
+          ['identity-seeded automatic filtering', hiddenGenericMatches === 2 && !otherGenericHidden],
+          ['ambiguous authors', detect('ambiguous-authors').status === 'ambiguous'],
+          ['LinkedIn post owner', detect('linkedin-post').label === 'Jane Doe'],
+          ['LinkedIn comment owner', detect('linkedin-comment').label === 'Alex Kim'],
+          ['Carousell rule', detect('carousell-listing').ruleId === 'carousell-listing'],
+          ['Carousell canonical URL', detect('carousell-listing').href === 'https://www.carousell.sg/u/watch.pieces'],
+          ['Carousell grid boundary', boundary('carousell-listing').classList.contains('marketplace-cell')],
+          ['display-contents boundary', boundary('contents-listing').classList.contains('contents-result-cell')],
+          ['YouTube channel', detect('youtube-video').label === 'Studio North'],
+          ['unattributed YouTube box', detect('youtube-unattributed').status === 'none'],
+          ['Etsy rule', detect('etsy-listing').ruleId === 'etsy-listing'],
+          ['Etsy stable shop ID', detect('etsy-listing').entityId === '43008218'],
+          ['Etsy grid boundary', detect('etsy-listing').container.classList.contains('marketplace-cell')],
+        ]
+        return {
+          passed: checks.filter(([, passed]) => passed).length,
+          total: checks.length,
+          checks: checks.map(([name, passed]) => ({ name, passed })),
+        }
+      }
+
+      const fixtureCheckResults = globalThis.__runMuteByEntityFixtureChecks()
+      document.documentElement.dataset.fixtureChecks =
+        fixtureCheckResults.passed === fixtureCheckResults.total ? 'passed' : 'failed'
+      document.documentElement.dataset.fixtureCheckCount =
+        `${fixtureCheckResults.passed}/${fixtureCheckResults.total}`
+      document.documentElement.dataset.fixtureCheckResults = JSON.stringify(fixtureCheckResults)
     </script>
   </body>
 </html>

@@ -14,6 +14,9 @@
   const MIN_IDENTITY_SCORE = 7
   const MAX_IDENTITY_SCOPE_GROWTH = 8
   const MAX_FILTER_LAYOUT_ANCESTORS = 4
+  const MAX_CONTENT_UNIT_ASCENT = 7
+  const MIN_DISCOVERED_UNIT_WIDTH = 120
+  const MIN_DISCOVERED_UNIT_HEIGHT = 48
   const LINKEDIN_POST_UNIT_SELECTOR =
     '[class*="feed-shared-update" i], [data-urn^="urn:li:activity:"]'
   const LINKEDIN_COMMENT_UNIT_SELECTOR =
@@ -137,6 +140,101 @@
   function getBlockedKeywords(siteFilters, siteKey) {
     return normalizeBlockedKeywords(siteFilters?.[siteKey]?.blockedKeywords)
   }
+
+  const IDENTITY_SCOPE_RULES = [
+    {
+      id: 'linkedin-content',
+      discover(controller, context) {
+        return (
+          controller.findLinkedInContentUnit(context.hoveredElement) ||
+          controller.findLinkedInContentUnit(context.target)
+        )
+      },
+      resolve(controller, unit) {
+        return controller.findLinkedInUnitIdentity(unit)
+      },
+    },
+    {
+      id: 'carousell-listing',
+      discover(controller, context) {
+        return (
+          controller.findCarousellListingUnit(context.hoveredElement) ||
+          controller.findCarousellListingUnit(context.target)
+        )
+      },
+      accepts(controller, unit) {
+        return controller.isCarousellPage() || controller.hasCarousellSellerLink(unit)
+      },
+      resolve(controller, unit) {
+        const result = controller.findIdentityInContainer(
+          unit,
+          (anchor) => controller.getIdentityRoute(anchor.href)?.site === 'carousell'
+        )
+        return result.status === 'none'
+          ? null
+          : {
+              ...result,
+              relationship: 'listing-owner',
+              scope: 'carousell-listing',
+              container: controller.resolveFilterBoundary(unit),
+            }
+      },
+    },
+    {
+      id: 'etsy-listing',
+      discover(controller, context) {
+        return (
+          controller.findEtsyListingUnit(context.hoveredElement) ||
+          controller.findEtsyListingUnit(context.target)
+        )
+      },
+      accepts(controller, unit) {
+        return (
+          controller.isEtsyPage() ||
+          unit.matches('[class*="etsy-listing-card" i], [class*="v2-listing-card" i]')
+        )
+      },
+      resolve(controller, unit) {
+        const shopIdResult = controller.findEtsyShopId(unit)
+        if (shopIdResult.status === 'found') {
+          return {
+            ...shopIdResult,
+            relationship: 'listing-owner',
+            scope: 'etsy-shop-id',
+            container: controller.resolveFilterBoundary(unit),
+          }
+        }
+
+        const linkedResult = controller.findIdentityInContainer(unit)
+        return linkedResult.status === 'none'
+          ? null
+          : {
+              ...linkedResult,
+              relationship: 'listing-owner',
+              scope: 'current',
+              container: controller.resolveFilterBoundary(unit),
+            }
+      },
+    },
+    {
+      id: 'youtube',
+      discover(controller, context) {
+        return controller.isYouTubePage() ? context.target : null
+      },
+      resolve(controller, _unit, context) {
+        return controller.findYouTubeIdentity(context)
+      },
+    },
+    {
+      id: 'linkedin-page',
+      discover(_controller, context) {
+        return context.route?.site === 'linkedin' ? context.target : null
+      },
+      resolve(controller, _unit, context) {
+        return controller.findLinkedInPageIdentity(context)
+      },
+    },
+  ]
 
   class ExtensionStateStore {
     constructor() {
@@ -637,6 +735,93 @@
       return similar >= 2
     }
 
+    isIdentityAnchorSeed(anchor) {
+      if (!(anchor instanceof HTMLAnchorElement)) return false
+      if (anchor.closest('nav,header,footer,[role="navigation"]')) return false
+
+      const rawHref = anchor.getAttribute('href') || ''
+      if (!rawHref || /^(javascript:|mailto:|tel:)/i.test(rawHref)) return false
+
+      const href = anchor.href || rawHref
+      let hrefPath = href
+      try {
+        hrefPath = decodeURIComponent(new URL(href, location.href).pathname)
+      } catch {
+        // Keep the raw link when a page contains malformed escapes.
+      }
+      const context = this.getIdentityContext(anchor, document.body)
+      return Boolean(
+        this.getIdentityRoute(href) ||
+        anchor.matches('[rel~="author"], [itemprop="author"]') ||
+        IDENTITY_WORDS.test(context) ||
+        IDENTITY_WORDS.test(hrefPath) ||
+        /\/(?:u|users?|profiles?|members?|authors?|sellers?|shops?|stores?|channels?)\//i.test(hrefPath) ||
+        /(?:^|\/)@[\w.-]+\/?$/i.test(hrefPath)
+      )
+    }
+
+    isRepeatedContentUnit(element) {
+      if (!(element instanceof HTMLElement)) return false
+      if (element.matches('html,body,main,nav,header,footer,aside,form,dialog')) return false
+
+      const rect = element.getBoundingClientRect()
+      if (rect.width < MIN_DISCOVERED_UNIT_WIDTH || rect.height < MIN_DISCOVERED_UNIT_HEIGHT) {
+        return false
+      }
+
+      const style = getComputedStyle(element)
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+        return false
+      }
+
+      const meaningfulContent = (element.innerText || '').trim().length >= 12
+      if (!meaningfulContent && !element.querySelector('img,a,h1,h2,h3,h4')) return false
+      return this.hasRepeatedSiblings(element)
+    }
+
+    findRepeatedContentUnit(element, cache = null) {
+      const inspected = []
+      let current = element.parentElement
+
+      for (let depth = 0; current && depth < MAX_CONTENT_UNIT_ASCENT; depth += 1) {
+        if (cache?.has(current)) {
+          const cached = cache.get(current)
+          for (const inspectedElement of inspected) cache.set(inspectedElement, cached)
+          return cached
+        }
+
+        inspected.push(current)
+        if (this.isRepeatedContentUnit(current)) {
+          for (const inspectedElement of inspected) cache?.set(inspectedElement, current)
+          return current
+        }
+        current = current.parentElement
+      }
+
+      for (const inspectedElement of inspected) cache?.set(inspectedElement, null)
+      return null
+    }
+
+    discoverContentUnits(root = document) {
+      const units = new Set(root.querySelectorAll(CONTENT_UNIT_SELECTOR))
+      const repeatedUnitCache = new Map()
+
+      for (const anchor of root.querySelectorAll('a[href]')) {
+        if (!this.isIdentityAnchorSeed(anchor)) continue
+
+        const knownUnit = anchor.closest(CONTENT_UNIT_SELECTOR)
+        if (knownUnit) {
+          units.add(knownUnit)
+          continue
+        }
+
+        const repeatedUnit = this.findRepeatedContentUnit(anchor, repeatedUnitCache)
+        if (repeatedUnit) units.add(repeatedUnit)
+      }
+
+      return [...units]
+    }
+
     elementSignature(element) {
       const classes = [...element.classList]
         .filter((name) => name.length < 48 && !/^(active|hover|selected|focus)/i.test(name))
@@ -725,21 +910,34 @@
       return { status: 'none', reason: 'No linked seller, author, or commenter found', scope: 'current' }
     }
 
-    findIdentityInContainer(container, acceptsAnchor = null) {
+    collectIdentityAnchors(container) {
       const anchors = []
       if (container.matches?.('a[href]')) anchors.push(container)
       anchors.push(...container.querySelectorAll('a[href]'))
+      return anchors.slice(0, 80)
+    }
 
-      const grouped = new Map()
-      for (const anchor of anchors.slice(0, 80)) {
+    extractIdentityCandidates(container, acceptsAnchor = null) {
+      const candidates = []
+      for (const anchor of this.collectIdentityAnchors(container)) {
         if (acceptsAnchor && !acceptsAnchor(anchor)) continue
         const candidate = this.buildIdentityCandidate(anchor, container)
         if (!candidate || candidate.score < MIN_IDENTITY_SCORE) continue
+        candidates.push(candidate)
+      }
+      return candidates
+    }
+
+    groupIdentityCandidates(candidates) {
+      const grouped = new Map()
+      for (const candidate of candidates) {
         const existing = grouped.get(candidate.key)
         if (!existing || candidate.score > existing.score) grouped.set(candidate.key, candidate)
       }
+      return [...grouped.values()].sort((a, b) => b.score - a.score)
+    }
 
-      const candidates = [...grouped.values()].sort((a, b) => b.score - a.score)
+    resolveIdentityCandidates(candidates) {
       if (candidates.length === 0) return { status: 'none' }
 
       const top = candidates[0]
@@ -749,7 +947,15 @@
           status: 'ambiguous',
           reason: 'Multiple possible people are linked in this box',
           count: candidates.length,
-          candidates: candidates.slice(0, 3).map(({ label, type, href, score }) => ({ label, type, href, score })),
+          candidates: candidates.slice(0, 3).map(
+            ({ label, type, href, score, relationship }) => ({
+              label,
+              type,
+              href,
+              score,
+              relationship,
+            })
+          ),
         }
       }
 
@@ -760,130 +966,45 @@
         type: top.type,
         href: top.href,
         score: top.score,
+        relationship: top.relationship,
       }
     }
 
-    findSiteIdentity(target) {
-      const route = this.getIdentityRoute(location.href)
-      const linkedInUnit =
-        this.findLinkedInContentUnit(this.hoveredElement) || this.findLinkedInContentUnit(target)
-      if (linkedInUnit) return this.findLinkedInUnitIdentity(linkedInUnit)
+    findIdentityInContainer(container, acceptsAnchor = null) {
+      const extracted = this.extractIdentityCandidates(container, acceptsAnchor)
+      const grouped = this.groupIdentityCandidates(extracted)
+      return this.resolveIdentityCandidates(grouped)
+    }
 
-      const carousellUnit =
-        this.findCarousellListingUnit(this.hoveredElement) ||
-        this.findCarousellListingUnit(target)
-      if (
-        carousellUnit &&
-        (this.isCarousellPage() || this.hasCarousellSellerLink(carousellUnit))
-      ) {
-        const sellerResult = this.findIdentityInContainer(
-          carousellUnit,
-          (anchor) => this.getIdentityRoute(anchor.href)?.site === 'carousell'
-        )
-        if (sellerResult.status !== 'none') {
-          return {
-            ...sellerResult,
-            scope: 'carousell-listing',
-            container: this.findFilterTarget(carousellUnit),
-          }
-        }
+    createIdentityContext(target, hoveredElement = this.hoveredElement) {
+      return {
+        target,
+        hoveredElement: hoveredElement instanceof Element ? hoveredElement : null,
+        route: this.getIdentityRoute(location.href),
       }
+    }
 
-      const etsyUnit =
-        this.findEtsyListingUnit(this.hoveredElement) || this.findEtsyListingUnit(target)
-      if (
-        etsyUnit &&
-        (this.isEtsyPage() || etsyUnit.matches('[class*="etsy-listing-card" i], [class*="v2-listing-card" i]'))
-      ) {
-        const shopIdResult = this.findEtsyShopId(etsyUnit)
-        if (shopIdResult.status === 'found') {
-          return {
-            ...shopIdResult,
-            scope: 'etsy-shop-id',
-            container: this.findFilterTarget(etsyUnit),
-          }
-        }
+    findScopedIdentity(context) {
+      for (const rule of IDENTITY_SCOPE_RULES) {
+        const unit = rule.discover(this, context)
+        if (!(unit instanceof Element)) continue
+        if (rule.accepts && !rule.accepts(this, unit, context)) continue
 
-        const linkedResult = this.findIdentityInContainer(etsyUnit)
-        if (linkedResult.status !== 'none') {
-          return {
-            ...linkedResult,
-            scope: 'current',
-            container: this.findFilterTarget(etsyUnit),
-          }
-        }
+        const result = rule.resolve(this, unit, context)
+        if (result) return { ...result, ruleId: rule.id }
       }
-
-      const isYouTube = this.isYouTubePage()
-
-      if (isYouTube) {
-        const videoUnit =
-          this.findYouTubeVideoUnit(this.hoveredElement) || this.findYouTubeVideoUnit(target)
-        if (videoUnit) {
-          if (route?.site === 'youtube') {
-            const pageHeader = document.querySelector(
-              'yt-page-header-renderer, ytd-c4-tabbed-header-renderer, #page-header'
-            )
-            if (pageHeader) {
-              const pageIdentity = this.buildPageHeaderIdentity(pageHeader, route)
-              if (pageIdentity) {
-                return { ...pageIdentity, scope: 'page-context', container: videoUnit }
-              }
-            }
-          }
-
-          const result = this.findIdentityInContainer(videoUnit)
-          if (result.status !== 'none') {
-            return { ...result, scope: 'video-unit', container: videoUnit }
-          }
-        }
-
-        const channelHeader = target.closest(
-          'yt-page-header-renderer, ytd-c4-tabbed-header-renderer, #page-header'
-        )
-        if (channelHeader && route?.site === 'youtube') {
-          return this.buildPageHeaderIdentity(channelHeader, route)
-        }
-
-        if (location.pathname === '/watch') {
-          const player = target.closest('#movie_player, ytd-player, #player')
-          if (player) {
-            const owner = document.querySelector(
-              'ytd-watch-metadata ytd-video-owner-renderer, #owner ytd-video-owner-renderer'
-            )
-            if (owner) {
-              const result = this.findIdentityInContainer(owner)
-              if (result.status === 'found') {
-                return { ...result, scope: 'page-context', container: player }
-              }
-            }
-          }
-        }
-      }
-
-      if (route?.site === 'linkedin') {
-        const profileHeader = target.closest(
-          'main [data-view-name*="profile" i], main .pv-top-card, main .org-top-card, main > section'
-        )
-        if (profileHeader?.querySelector('h1,[role="heading"]')) {
-          return this.buildPageHeaderIdentity(profileHeader, route)
-        }
-      }
-
       return null
+    }
+
+    findSiteIdentity(target) {
+      return this.findScopedIdentity(this.createIdentityContext(target))
     }
 
     findIdentityForMuteUnit(unit) {
       if (!(unit instanceof Element)) return { status: 'none' }
 
-      const previousHoveredElement = this.hoveredElement
-      this.hoveredElement = null
-      try {
-        const siteResult = this.findSiteIdentity(unit)
-        if (siteResult) return siteResult
-      } finally {
-        this.hoveredElement = previousHoveredElement
-      }
+      const siteResult = this.findScopedIdentity(this.createIdentityContext(unit, null))
+      if (siteResult) return siteResult
 
       const result = this.findIdentityInContainer(unit)
       return result.status === 'none'
@@ -1067,7 +1188,7 @@
       return nestedUnits.length === 1 ? nestedUnits[0] : null
     }
 
-    findFilterTarget(contentUnit) {
+    resolveFilterBoundary(contentUnit) {
       let current = contentUnit
 
       for (let depth = 0; depth < MAX_FILTER_LAYOUT_ANCESTORS; depth += 1) {
@@ -1141,6 +1262,75 @@
       return fullUnit || target.closest('yt-lockup-view-model')
     }
 
+    findYouTubeIdentity(context) {
+      const { target, hoveredElement, route } = context
+      const videoUnit =
+        this.findYouTubeVideoUnit(hoveredElement) || this.findYouTubeVideoUnit(target)
+      if (videoUnit) {
+        if (route?.site === 'youtube') {
+          const pageHeader = document.querySelector(
+            'yt-page-header-renderer, ytd-c4-tabbed-header-renderer, #page-header'
+          )
+          if (pageHeader) {
+            const pageIdentity = this.buildPageHeaderIdentity(pageHeader, route)
+            if (pageIdentity) {
+              return {
+                ...pageIdentity,
+                relationship: 'channel-owner',
+                scope: 'page-context',
+                container: videoUnit,
+              }
+            }
+          }
+        }
+
+        const result = this.findIdentityInContainer(videoUnit)
+        if (result.status !== 'none') {
+          return {
+            ...result,
+            relationship: 'channel-owner',
+            scope: 'video-unit',
+            container: videoUnit,
+          }
+        }
+      }
+
+      const channelHeader = target.closest(
+        'yt-page-header-renderer, ytd-c4-tabbed-header-renderer, #page-header'
+      )
+      if (channelHeader && route?.site === 'youtube') {
+        return this.buildPageHeaderIdentity(channelHeader, route)
+      }
+
+      if (location.pathname !== '/watch') return null
+
+      const player = target.closest('#movie_player, ytd-player, #player')
+      if (!player) return null
+
+      const owner = document.querySelector(
+        'ytd-watch-metadata ytd-video-owner-renderer, #owner ytd-video-owner-renderer'
+      )
+      if (!owner) return null
+
+      const result = this.findIdentityInContainer(owner)
+      return result.status === 'found'
+        ? {
+            ...result,
+            relationship: 'channel-owner',
+            scope: 'page-context',
+            container: player,
+          }
+        : null
+    }
+
+    findLinkedInPageIdentity(context) {
+      const profileHeader = context.target.closest(
+        'main [data-view-name*="profile" i], main .pv-top-card, main .org-top-card, main > section'
+      )
+      if (!profileHeader?.querySelector('h1,[role="heading"]')) return null
+      return this.buildPageHeaderIdentity(profileHeader, context.route)
+    }
+
     buildPageHeaderIdentity(container, route) {
       const heading = container.querySelector('h1,[role="heading"][aria-level="1"]')
       const label = (heading?.innerText || '').replace(/\s+/g, ' ').trim()
@@ -1206,8 +1396,47 @@
 
       const type = identityRoute?.type || this.inferIdentityType(`${context} ${hrefText} ${nearbyText}`)
       const canonicalHref = identityRoute?.href || href
-      const key = this.normalizeIdentityKey(canonicalHref, label)
-      return { key, label, type, href: canonicalHref, score }
+      const relationship = this.classifyIdentityRelationship({
+        anchor,
+        container,
+        context,
+        nearbyText,
+        nearestUnit,
+      })
+      return this.canonicalizeIdentityCandidate({
+        label,
+        type,
+        href: canonicalHref,
+        score,
+        relationship,
+      })
+    }
+
+    classifyIdentityRelationship({ anchor, container, context, nearbyText, nearestUnit }) {
+      if (nearestUnit && nearestUnit !== container && container.contains(nearestUnit)) {
+        return 'nested-content'
+      }
+      if (
+        SECONDARY_ATTRIBUTION_WORDS.test(context) ||
+        /\b(?:liked|likes|recommended|celebrated|supports) this\b/i.test(nearbyText)
+      ) {
+        return 'social-context'
+      }
+      if (
+        anchor.matches('[rel~="author"], [itemprop="author"]') ||
+        PRIMARY_IDENTITY_WORDS.test(context) ||
+        IDENTITY_WORDS.test(context)
+      ) {
+        return 'owner'
+      }
+      return 'possible-owner'
+    }
+
+    canonicalizeIdentityCandidate(candidate) {
+      return {
+        ...candidate,
+        key: this.normalizeIdentityKey(candidate.href, candidate.label),
+      }
     }
 
     getIdentityLabel(anchor, identityRoute) {
@@ -1651,13 +1880,13 @@
       if (!this.enabled || (!this.profiles.length && !this.blockedKeywords.length)) return
 
       const mutedKeys = new Set(this.profiles.map((profile) => profile.key))
-      const units = [...document.querySelectorAll(CONTENT_UNIT_SELECTOR)]
+      const units = this.controller.discoverContentUnits()
       const hiddenTargets = new Set()
       const checkedTargets = new Set(document.querySelectorAll(`[${HIDDEN_ATTRIBUTE}]`))
       for (const unit of units) {
         if (!(unit instanceof HTMLElement) || unit.closest(`#${UI_TAG}`)) continue
         checkedTargets.add(unit)
-        const filterTarget = this.controller.findFilterTarget(unit)
+        const filterTarget = this.controller.resolveFilterBoundary(unit)
         checkedTargets.add(filterTarget)
 
         if (this.blockedKeywords.length) {
@@ -1671,7 +1900,7 @@
           const result = this.controller.findIdentityForMuteUnit(unit)
           const key = result.status === 'found' ? this.getIdentityKey(result) : ''
           const contentTarget = result.container instanceof HTMLElement ? result.container : unit
-          const target = this.controller.findFilterTarget(contentTarget)
+          const target = this.controller.resolveFilterBoundary(contentTarget)
           checkedTargets.add(target)
           if (key && mutedKeys.has(key)) hiddenTargets.add(target)
         }

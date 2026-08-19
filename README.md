@@ -19,6 +19,7 @@ The extension currently provides:
 - A responsive settings page that lists muted profiles and blocked keywords across every site
 - Isolated hover and confirmation UI rendered in a Shadow DOM
 - Semantic and repeated-sibling container scoring
+- Identity-seeded discovery for repeated cards that have no semantic card or listing marker
 - Read-only seller/author/commenter detection while hovering
 - Bounded fallback to a surrounding box when the inner box has no identity
 - Container selection remains available when identity detection is uncertain or unavailable
@@ -45,6 +46,21 @@ The extension currently provides:
 Identity detection remains heuristic. A profile is saved only after the user
 selects a content box with one confidently detected identity and confirms the
 mute. Ambiguous boxes cannot be muted.
+
+Detection runs through a shared page-local pipeline:
+
+1. Discover a semantic unit, an identity-seeded repeated unit, or a supported site scope.
+2. Collect linked identity candidates inside that scope.
+3. Classify each candidate's relationship to the content.
+4. Canonicalize the winning profile URL or stable entity ID.
+5. Resolve ambiguity before allowing a mute.
+6. Hide the repeated grid, flex, or list boundary when a saved rule matches.
+
+Supported-site behavior is registered in the ordered `IDENTITY_SCOPE_RULES`
+table in `content.js`. LinkedIn retains a focused ownership adapter because its
+posts, comments, mentions, and social-context links require different treatment.
+Carousell, Etsy, YouTube, and page-header handling use the same pipeline stages
+and shared filter-boundary resolver as the generic fallback.
 
 For LinkedIn, detected ownership and future mute matching are deliberately
 separate. A person defaults to authored posts and their own comments. An
@@ -99,6 +115,13 @@ to hide the existing keyboard plus nested Carousell/Etsy-shaped field-watch
 cells, then **Add live ACME listing** to verify that a dynamically inserted
 keyword match is hidden. You can also add that listing after muting ACME Audio
 to check dynamically inserted profile matches.
+
+The fixture also exposes `__runMuteByEntityFixtureChecks()` and records its
+result on the document element through `data-fixture-checks`,
+`data-fixture-check-count`, and `data-fixture-check-results`. These deterministic
+checks cover generic ownership, ambiguity, supported-site rules, canonical URLs,
+stable IDs, unattributed content, repeated-layout filter boundaries, and
+end-to-end automatic filtering of Circlly-shaped generic cards.
 
 ## Structure
 
