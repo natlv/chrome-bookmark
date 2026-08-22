@@ -1,6 +1,6 @@
 {
   "name": "mute-by-entity-extension",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "scripts": {
     "check": "node --check content.js && node --check popup.js && node --check options.js"

@@ -1,7 +1,7 @@
 {
   "name": "Feed Cleanser",
   "description": "Automatically hide unwanted content when browsing.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "manifest_version": 3,
   "permissions": ["activeTab", "scripting", "storage"],
   "content_scripts": [
